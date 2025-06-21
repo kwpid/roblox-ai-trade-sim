@@ -1155,7 +1155,7 @@ function updateItem(itemId, updates) {
 
   if (oldValue !== item.value) {
       if (!item.stats) { // For items created before this feature
-           item.stats = { tradeCount: 0, overpayEvents: 0, totalOverpayPercent: 0, valueHistory: [{ date: new Date(), value: oldValue }] };
+           item.stats = { tradeCount: 0, netPayRatioSum: 0, valueHistory: [{ date: new Date(), value: oldValue }] };
       }
       item.stats.valueHistory.push({ date: new Date(), value: item.value });
   }
@@ -1721,232 +1721,129 @@ function attemptTopTierTrade() {
     }
 }
 
-function attemptRandomTrade() {
+function attemptRandomTrade(isForced = false) {
     if (aiUsers.length < 2) return;
 
+    // Richer users are more likely to initiate trades
     const traderPool = aiUsers.filter(u => !u.isAdmin && u.inventory.length > 0);
     if (traderPool.length < 2) return;
-
-    // Decide what kind of trade to attempt
-    const tradeTypeRoll = Math.random();
-    if (tradeTypeRoll < 0.35) { // 35% chance for a top-tier trade
-        attemptTopTierTrade();
-    } else if (tradeTypeRoll < 0.60) { // 25% chance for a general high-value trade
-        attemptHighValueTrade();
-    } else { // 40% chance for a common trade
-        attemptCommonTrade();
-    }
-}
-
-function attemptCommonTrade() {
-    const traderPool = aiUsers.filter(u => !u.isAdmin && u.inventory.length > 0);
-    if (traderPool.length < 2) return;
-
-    // Weighted random selection based on value
-    const totalValue = traderPool.reduce((sum, u) => sum + calculateAIValue(u), 0);
-    function weightedPick(pool) {
-      let r = Math.random() * totalValue;
-      for (const u of pool) {
-        r -= calculateAIValue(u);
-        if (r <= 0) return u;
-      }
-      return pool[pool.length - 1];
-    }
-    const traderA = weightedPick(traderPool);
-    const traderBPool = traderPool.filter(u => u.id !== traderA.id && u.inventory.length > 0);
-    if (traderBPool.length === 0) return;
-    const traderB = weightedPick(traderBPool);
-
-    negotiateAndExecuteTrade(traderA, traderB);
-}
-
-function attemptHighValueTrade() {
-    // For high value trades, both participants must be wealthy
-    const topTierCutoff = Math.ceil(valueLeaderboard.length * 0.2);
-    const wealthyPool = valueLeaderboard.slice(0, topTierCutoff).filter(u => !u.isAdmin && u.inventory.length > 1);
-
-    if (wealthyPool.length < 2) return; // Not enough wealthy players to trade
-
-    // Weighted random selection based on value
-    const totalValue = wealthyPool.reduce((sum, u) => sum + calculateAIValue(u), 0);
-    function weightedPick(pool) {
-      let r = Math.random() * totalValue;
-      for (const u of pool) {
-        r -= calculateAIValue(u);
-        if (r <= 0) return u;
-      }
-      return pool[pool.length - 1];
-    }
-    const traderA = weightedPick(wealthyPool);
-    const traderBPool = wealthyPool.filter(u => u.id !== traderA.id);
-    if(traderBPool.length === 0) return;
-    const traderB = weightedPick(traderBPool);
-
-    negotiateAndExecuteTrade(traderA, traderB);
-}
-
-function negotiateAndExecuteTrade(traderA, traderB, isForced = false) {
-    const selectInitialOffer = (trader) => {
-        const offer = [];
-        const inventory = [...trader.inventory];
-        if (inventory.length === 0) return offer;
-
-        // Offer 1-3 items initially, fewer if they don't have many items.
-        const numItemsToOffer = Math.floor(Math.random() * Math.min(inventory.length, 3)) + 1;
-        
-        // Bias towards trading medium-value items, not their best or worst.
-        inventory.sort((a,b) => b.item.value - a.item.value);
-        const startIndex = Math.floor(inventory.length * 0.2); // Start after top 20%
-        const endIndex = Math.floor(inventory.length * 0.8); // End before bottom 20%
-        
-        let tradableSlice = [];
-        if (startIndex < endIndex) {
-            tradableSlice = inventory.slice(startIndex, endIndex);
-        }
-        
-        // Shuffle the selected slice to get random items from that tier
-        if (tradableSlice.length > 0) {
-            tradableSlice.sort(() => 0.5 - Math.random()); 
-            for (let i = 0; i < Math.min(numItemsToOffer, tradableSlice.length); i++) {
-                offer.push(tradableSlice[i]);
-            }
-        }
-        
-        // If they have very few items or the slice was empty, just offer something random
-        if(offer.length === 0 && inventory.length > 0){
-             inventory.sort(() => 0.5 - Math.random());
-             for (let i = 0; i < Math.min(numItemsToOffer, inventory.length); i++) {
-                offer.push(inventory[i]);
-             }
-        }
-
-        return offer;
-    };
     
-    const findAddItem = (trader, currentOffer, targetValue) => {
-        const availableItems = trader.inventory.filter(invItem =>
-            !currentOffer.some(offeredItem =>
-                offeredItem.item.id === invItem.item.id && offeredItem.serialNumber === invItem.serialNumber
-            )
+    const totalValue = traderPool.reduce((sum, u) => sum + Math.max(1000, calculateAIValue(u)), 0);
+    const pickInitiator = () => {
+        let random = Math.random() * totalValue;
+        for (const user of traderPool) {
+            random -= Math.max(1000, calculateAIValue(user));
+            if (random <= 0) return user;
+        }
+        return traderPool[traderPool.length - 1];
+    };
+
+    const initiator = pickInitiator();
+    const partnerPool = traderPool.filter(u => u.id !== initiator.id);
+    if (partnerPool.length === 0) return;
+    const partner = partnerPool[Math.floor(Math.random() * partnerPool.length)];
+
+    negotiateAndExecuteTrade(initiator, partner, isForced);
+}
+
+function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
+    // --- Phase 1: Initiator Decides What They Want ---
+    const partnerInventory = [...partner.inventory];
+    let targetItem = null;
+
+    // 25% chance to be 'curious' and seek out a newer item
+    if (Math.random() < 0.25) {
+        partnerInventory.sort((a, b) => b.item.id - a.item.id); // Sort by newest first
+        const initiatorTotalValue = calculateAIValue(initiator);
+        // Find a new-ish item they can reasonably afford
+        targetItem = partnerInventory.find(item => 
+            item.item.value < initiatorTotalValue * 0.9 && item.item.id > (itemIdCounter / 2)
         );
-
-        if (availableItems.length === 0) return null;
-
-        // Find the best item to add - one that is less than the target value but as close as possible
-        availableItems.sort((a, b) => a.item.value - b.item.value);
-
-        let bestItem = null;
-        // Find an item that is smaller than the value difference
-        for(const item of availableItems) {
-            if (item.item.value < targetValue * 1.2) { // Allow slight overshooting
-                bestItem = item;
-            } else {
-                break; // Items are sorted, so no need to check further
-            }
-        }
-        // Fallback: if no single item is small enough, just add the absolute smallest item they have
-        return bestItem || availableItems[0];
-    };
+    }
     
-    const offerA = selectInitialOffer(traderA);
-    const offerB = selectInitialOffer(traderB);
-
-    if (offerA.length === 0 || offerB.length === 0) return false;
-
-    let perceivedValueA = offerA.reduce((sum, i) => sum + (i.item.value * getStockMultiplier(i.item)), 0);
-    let perceivedValueB = offerB.reduce((sum, i) => sum + (i.item.value * getStockMultiplier(i.item)), 0);
-
-    // Iteratively add items to the lower-value side to balance the trade
-    for (let i = 0; i < 5; i++) { // Limit iterations
-        const valueDiff = perceivedValueA - perceivedValueB;
-        if (Math.abs(valueDiff) < Math.max(perceivedValueA, perceivedValueB) * 0.1) break; // Stop if values are within 10%
-
-        if (valueDiff > 0) { // Offer A is more valuable, B needs to add
-            if (offerB.length >= 6) break; // Do not allow more than 6 items on one side
-            const itemToAdd = findAddItem(traderB, offerB, valueDiff);
-            if (itemToAdd) {
-                offerB.push(itemToAdd);
-                perceivedValueB += (itemToAdd.item.value * getStockMultiplier(itemToAdd.item));
-            } else {
-                break;
-            }
-        } else { // Offer B is more valuable, A needs to add
-            if (offerA.length >= 6) break; // Do not allow more than 6 items on one side
-            const itemToAdd = findAddItem(traderA, offerA, -valueDiff);
-            if (itemToAdd) {
-                offerA.push(itemToAdd);
-                perceivedValueA += (itemToAdd.item.value * getStockMultiplier(itemToAdd.item));
-            } else {
-                break;
-            }
-        }
+    // If not curious or no suitable new item was found, fall back to upgrade logic
+    if (!targetItem) {
+        partnerInventory.sort((a,b) => b.item.value - a.item.value);
+        const initiatorBestItemValue = initiator.inventory.reduce((max, i) => Math.max(max, i.item.value), 0);
+        // Find an item in the partner's inventory that is a significant upgrade
+        targetItem = partnerInventory.find(item => item.item.value > initiatorBestItemValue * 1.1);
     }
 
-    if (perceivedValueA === 0 || perceivedValueB === 0) return false;
+    if (!targetItem) {
+        return false; // Initiator sees nothing they want.
+    }
     
-    const finalRatio = perceivedValueA / perceivedValueB;
-    if (finalRatio > 2.5 || finalRatio < 0.4) return false; // Reject wildly unbalanced trades
+    // --- Phase 2: Initiator Builds an Offer ---
+    let offerValue = 0;
+    const offer = [];
+    const initiatorTradableItems = [...initiator.inventory].sort((a,b) => b.item.value - a.item.value);
 
-    // Acceptance based on how good the deal is.
-    const calculateAcceptance = (ratio, itemsYouGet, isForced = false) => {
-        let chance = 0;
-        if (ratio > 1.2) chance = 0.8;  // Good overpay -> high chance
-        else if (ratio > 1.0) chance = 0.6;  // Slight overpay -> medium chance
-        else if (ratio > 0.95) chance = 0.4; // Fair trade -> moderate chance
-        else if (ratio > 0.8) chance = 0.15; // Small underpay -> low chance
-        else chance = 0.05; // Bad underpay -> very low chance
+    // AI tries to build a package to meet the target value, with a slight overpay to entice
+    const targetValueWithOverpay = targetItem.item.value * (1.05 + Math.random() * 0.1); // 5-15% overpay
 
-        // Demand bonus: more likely to accept trades for high-demand items
-        let demandBonus = 0;
-        for (const invItem of itemsYouGet) {
-            const demand = calculateDemand(invItem.item);
-            if (demand === "Very High") demandBonus += 0.15;
-            else if (demand === "High") demandBonus += 0.10;
-        }
-        chance += demandBonus;
+    for (const item of initiatorTradableItems) {
+        if (offerValue >= targetValueWithOverpay) break;
+        if (offer.length >= 6) break; // Don't offer too many items
+        
+        // Don't trade for the same item (e.g. Void Egg for Void Egg)
+        if (item.item.id === targetItem.item.id) continue;
 
-        if (isForced) {
-            chance += 0.5; // Drastically increase chance if forced
-        }
+        offer.push(item);
+        offerValue += item.item.value * getStockMultiplier(item.item);
+    }
 
-        return Math.min(1.0, chance);
-    };
+    if (offerValue < targetItem.item.value * 0.9) {
+        return false; // Couldn't build a compelling enough offer
+    }
 
-    const acceptanceA = calculateAcceptance(perceivedValueB / perceivedValueA, offerB, isForced);
-    const acceptanceB = calculateAcceptance(perceivedValueA / perceivedValueB, offerA, isForced);
+    // --- Phase 3: Partner Evaluates and Accepts/Rejects ---
+    const partnerSeesOfferValue = offerValue;
+    const partnerGivesUpValue = targetItem.item.value * getStockMultiplier(targetItem.item);
 
-    if (Math.random() < acceptanceA && Math.random() < acceptanceB) {
-        executeTrade(traderA, traderB, offerA, offerB);
+    // Partner is more likely to accept if they are getting significant overpay
+    const perceivedRatio = partnerSeesOfferValue / partnerGivesUpValue;
+    let acceptanceChance = 0;
+
+    if (perceivedRatio > 1.25) acceptanceChance = 0.9;  // Great deal
+    else if (perceivedRatio > 1.1) acceptanceChance = 0.7; // Good deal
+    else if (perceivedRatio > 1.0) acceptanceChance = 0.4;  // Fair deal
+    else acceptanceChance = 0.1; // Bad deal
+
+    if (isForced) acceptanceChance = 1.0;
+    
+    if (Math.random() < acceptanceChance) {
+        // Trade accepted!
+        executeTrade(initiator, partner, offer, [targetItem]);
         return true;
     }
+
     return false;
 }
 
 function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
     lastTradeTimestamp = new Date(); // Update the timestamp
-    const valueA = itemsFromA.reduce((sum, i) => sum + i.item.value, 0);
-    const valueB = itemsFromB.reduce((sum, i) => sum + i.item.value, 0);
+    const valueFromA = itemsFromA.reduce((sum, i) => sum + i.item.value, 0);
+    const valueFromB = itemsFromB.reduce((sum, i) => sum + i.item.value, 0);
 
     const allTradedItems = [...itemsFromA, ...itemsFromB];
     for (const invItem of allTradedItems) {
          if (!invItem.item.stats) { // Initialize if not present for old data
-             invItem.item.stats = { tradeCount: 0, overpayEvents: 0, totalOverpayPercent: 0, valueHistory: [{ date: new Date(), value: invItem.item.value }] };
+             invItem.item.stats = { tradeCount: 0, netPayRatioSum: 0, valueHistory: [{ date: new Date(), value: invItem.item.value }] };
          }
          invItem.item.stats.tradeCount++;
     }
 
-    const ratio = valueA / valueB;
-    if (ratio > 1.05) { // trader B got overpay (A paid more)
-        const overpayPercent = ratio - 1;
-        itemsFromB.forEach(invItem => {
-            invItem.item.stats.overpayEvents++;
-            invItem.item.stats.totalOverpayPercent += overpayPercent;
+    // Calculate pay ratios and update stats
+    if (valueFromB > 0) {
+        const ratioForA = valueFromA / valueFromB; // How much A gave vs what B gave
+        itemsFromB.forEach(invItem => { // Items B gave away
+             invItem.item.stats.netPayRatioSum += (ratioForA - 1);
         });
-    } else if (ratio < 0.95) { // trader A got overpay (B paid more)
-        const overpayPercent = (1/ratio) - 1;
-        itemsFromA.forEach(invItem => {
-            invItem.item.stats.overpayEvents++;
-            invItem.item.stats.totalOverpayPercent += overpayPercent;
+    }
+    if (valueFromA > 0) {
+        const ratioForB = valueFromB / valueFromA; // How much B gave vs what A gave
+        itemsFromA.forEach(invItem => { // Items A gave away
+            invItem.item.stats.netPayRatioSum += (ratioForB - 1);
         });
     }
     
@@ -1978,7 +1875,6 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
     }
     
     updateAllLeaderboards();
-    updateAIHistoryOnChange();
     if(document.getElementById('trades').classList.contains('active')) {
       renderTradeHistory();
     }
@@ -2030,33 +1926,20 @@ function renderTradeHistory() {
 
 function startTradingTimer() {
     setInterval(() => {
-        // Normal random attempt
-        if (Math.random() < 0.5) { // Don't attempt every interval, just sometimes
-            attemptRandomTrade();
+        // Attempt to run 3 trades every 10 seconds.
+        for (let i = 0; i < 3; i++) {
+            // Use a slight delay between each attempt within the batch
+            setTimeout(attemptRandomTrade, i * 100);
         }
+    }, 10000);
 
-        // Check if a trade needs to be forced
+    // Also keep the inactivity check to force trades if the market is stale.
+    setInterval(() => {
         if (new Date() - lastTradeTimestamp > 30000) {
             console.log("Forcing a trade due to inactivity...");
-            // Try to force a trade to happen by making AI more agreeable
-            for (let i = 0; i < 5; i++) { // Try up to 5 times
-                 const traderPool = aiUsers.filter(u => !u.isAdmin && u.inventory.length > 1);
-                 if (traderPool.length < 2) break;
-                 
-                 const traderA = traderPool[Math.floor(Math.random() * traderPool.length)];
-                 const traderBPool = traderPool.filter(u => u.id !== traderA.id && u.inventory.length > 1);
-                 if (traderBPool.length === 0) continue;
-                 const traderB = traderBPool[Math.floor(Math.random() * traderBPool.length)];
-                 
-                 // The 'true' flag makes the AIs highly likely to accept
-                 const tradeHappened = negotiateAndExecuteTrade(traderA, traderB, true); 
-                 if (tradeHappened) {
-                     console.log("Forced trade successful.");
-                     break; 
-                 }
-            }
+            attemptRandomTrade(true); // The 'true' flag makes the AIs highly likely to accept
         }
-    }, 4000); // Check every 4 seconds
+    }, 15000);
 }
 
 // --- End of Trading System ---
@@ -2318,7 +2201,7 @@ function openItemStatsPopup(itemId) {
     if (!item) return;
     
     if (!item.stats) {
-        item.stats = { tradeCount: 0, overpayEvents: 0, totalOverpayPercent: 0, valueHistory: [{ date: new Date(), value: item.value }] };
+        item.stats = { tradeCount: 0, netPayRatioSum: 0, valueHistory: [{ date: new Date(), value: item.value }] };
     }
 
     document.getElementById('item-stats-title').textContent = `${item.name} - Stats`;
@@ -2326,7 +2209,7 @@ function openItemStatsPopup(itemId) {
     document.getElementById('item-stats-img-src').alt = item.name;
 
     document.getElementById('item-stats-demand').textContent = calculateDemand(item);
-    const avgOp = item.stats.overpayEvents > 0 ? (item.stats.totalOverpayPercent / item.stats.overpayEvents) * 100 : 0;
+    const avgOp = item.stats.tradeCount > 0 ? (item.stats.netPayRatioSum / item.stats.tradeCount) * 100 : 0;
     document.getElementById('item-stats-op').textContent = `${avgOp.toFixed(1)}%`;
     document.getElementById('item-stats-trades').textContent = item.stats.tradeCount;
 
@@ -2342,21 +2225,17 @@ function closeItemStatsPopup() {
 }
 
 function calculateDemand(item) {
-    const allTradeCounts = marketplace.filter(i => i.stats && i.isCollectible).map(i => i.stats.tradeCount);
-    if (allTradeCounts.length < 5) return "N/A";
+    if (!item.stats || item.stats.tradeCount < 5) {
+        return "N/A"; // Not enough data
+    }
+    
+    const avgPayRatio = item.stats.netPayRatioSum / item.stats.tradeCount;
 
-    allTradeCounts.sort((a,b) => a - b);
-    const percentile80 = allTradeCounts[Math.floor(allTradeCounts.length * 0.8)];
-    const percentile60 = allTradeCounts[Math.floor(allTradeCounts.length * 0.6)];
-    const percentile40 = allTradeCounts[Math.floor(allTradeCounts.length * 0.4)];
-    const percentile20 = allTradeCounts[Math.floor(allTradeCounts.length * 0.2)];
-
-    if (item.stats.tradeCount === 0) return "Very Low";
-    if (item.stats.tradeCount > percentile80) return "Very High";
-    if (item.stats.tradeCount > percentile60) return "High";
-    if (item.stats.tradeCount > percentile40) return "Medium";
-    if (item.stats.tradeCount > percentile20) return "Low";
-    return "Very Low";
+    if (avgPayRatio > 0.10) return "Very High"; // Consistently gets >10% overpay
+    if (avgPayRatio > 0.04) return "High";      // Consistently gets >4% overpay
+    if (avgPayRatio > -0.04) return "Medium";   // Trades around value (-4% to 4%)
+    if (avgPayRatio > -0.10) return "Low";      // Consistently gets <4% underpay
+    return "Very Low"; // Consistently gets >10% underpay
 }
 
 function renderValueChart(item) {
