@@ -7,45 +7,57 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --primary-blue: #00a2ff;
-      --dark-blue: #0066cc;
-      --light-blue: #66c2ff;
-      --background-dark: #1a1a1a;
-      --background-darker: #121212;
-      --background-light: #2a2a2a;
-      --text-primary: #ffffff;
-      --text-secondary: #cccccc;
-      --success-green: #4caf50;
-      --warning-orange: #ff9800;
-      --danger-red: #f44336;
-      --rap-yellow: #ffcc00;
-      --value-green: #00cc66;
-      --border-color: #333333;
+      /* Roblox Dark Mode Palette */
+      --primary-text: #CBCBCB;
+      --background-main: #111217;
+      --background-panel: #222222;
+      --background-card: #292929;
+      --accent-blue: #2BB1FF;
+      --danger-red: #F4645D;
+      --success-green: #00E87E;
+      --highlight-pink: #FA6C8D;
+
+      /* Grayscale */
+      --gray-light: #B7B7B7;
+      --gray-mid-light: #848484;
+      --gray-mid: #515151;
+      --gray-dark: #2D2D2D;
+      --gray-darker: #252525;
+
+      --border-color: var(--gray-mid);
+      
+      /* Utility */
+      --font-main: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+      --radius: 8px;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     body {
-      background-color: var(--background-dark);
-      color: var(--text-primary);
-      font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: var(--background-main);
+      color: var(--primary-text);
+      font-family: var(--font-main);
       margin: 0;
       padding: 0;
+      font-size: 16px;
     }
 
     header {
-      background-color: var(--background-darker);
+      background-color: var(--background-panel);
       padding: 15px 30px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 2px solid var(--primary-blue);
+      border-bottom: 1px solid var(--border-color);
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      position: sticky;
+      top: 0;
+      z-index: 1001; /* High z-index for header */
     }
 
     .logo {
       font-size: 28px;
       font-weight: bold;
-      color: var(--primary-blue);
-      text-shadow: 0 0 10px rgba(0, 162, 255, 0.3);
+      color: var(--accent-blue);
     }
 
     nav {
@@ -56,23 +68,23 @@
     nav button {
       background: none;
       border: none;
-      color: var(--text-primary);
+      color: var(--primary-text);
       font-size: 16px;
       padding: 10px 20px;
       cursor: pointer;
-      border-radius: 6px;
-      transition: all 0.2s;
+      border-radius: var(--radius);
+      transition: background-color 0.2s, color 0.2s;
       font-weight: 600;
     }
 
     nav button:hover {
-      background-color: rgba(0, 162, 255, 0.1);
+      background-color: var(--gray-dark);
+      color: var(--accent-blue);
     }
 
     nav button.active {
-      background-color: var(--primary-blue);
-      color: white;
-      box-shadow: 0 0 10px rgba(0, 162, 255, 0.5);
+      background-color: var(--accent-blue);
+      color: #fff;
     }
 
     .container {
@@ -95,7 +107,7 @@
       display: block;
     }
 
-    /* Marketplace Styles */
+    /* Common UI Elements */
     .marketplace-header {
       display: flex;
       justify-content: space-between;
@@ -106,31 +118,29 @@
     }
 
     .btn {
-      background-color: var(--primary-blue);
+      background-color: var(--accent-blue);
       color: white;
       border: none;
       padding: 12px 25px;
-      border-radius: 6px;
+      border-radius: var(--radius);
       cursor: pointer;
       font-weight: bold;
       transition: all 0.2s;
       font-size: 16px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
 
     .btn:hover {
-      background-color: var(--dark-blue);
+      background-color: #1a9de8; /* Slightly lighter blue */
       transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
 
     .btn-secondary {
-      background-color: var(--background-light);
-      color: var(--text-primary);
+      background-color: var(--gray-mid);
+      color: var(--primary-text);
     }
 
     .btn-secondary:hover {
-      background-color: #333;
+      background-color: var(--gray-mid-light);
     }
 
     .btn-danger {
@@ -138,11 +148,11 @@
     }
 
     .btn-danger:hover {
-      background-color: #d32f2f;
+      background-color: #f24e46; /* Lighter red */
     }
 
     .btn-warning {
-      background-color: var(--warning-orange);
+      background-color: #ff9800; /* Reusing old orange as no new one was provided */
     }
 
     .btn-warning:hover {
@@ -156,31 +166,28 @@
     }
 
     .item-card {
-      background-color: var(--background-light);
-      border-radius: 10px;
+      background-color: var(--background-card);
+      border-radius: var(--radius);
       overflow: hidden;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow);
       transition: transform 0.2s, box-shadow 0.2s;
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--gray-dark);
       position: relative;
     }
 
     .item-card:hover {
       transform: translateY(-5px);
-      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+      border-color: var(--accent-blue);
     }
 
     .item-image {
       width: 100%;
       height: 200px;
       object-fit: cover;
-      border-bottom: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--gray-dark);
     }
 
-    .item-details {
-      padding: 18px;
-    }
-
+    .item-details { padding: 18px; }
     .item-name {
       font-size: 18px;
       font-weight: bold;
@@ -188,73 +195,24 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: var(--primary-text);
     }
-
-    .item-value {
-      color: var(--value-green);
-      font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 8px;
-    }
-
-    .item-rap {
-      color: var(--rap-yellow);
-      font-weight: bold;
-      font-size: 16px;
-      margin-bottom: 8px;
-    }
-
-    .item-stock {
-      display: flex;
-      align-items: center;
-      margin-bottom: 8px;
-      font-size: 14px;
-      color: var(--text-secondary);
-    }
-
-    .stock-bar {
-      flex-grow: 1;
-      height: 8px;
-      background-color: #333;
-      border-radius: 4px;
-      margin-left: 10px;
-      overflow: hidden;
-    }
-
-    .stock-fill {
-      height: 100%;
-      background-color: var(--primary-blue);
-      width: 100%;
-    }
-
-    .item-owners {
-      font-size: 14px;
-      color: var(--text-secondary);
-      margin-top: 10px;
-    }
-
-    .item-timer {
-      font-size: 14px;
-      font-weight: bold;
-      color: var(--danger-red);
-      margin-top: 10px;
-      text-align: center;
-      background-color: rgba(244, 67, 54, 0.1);
-      padding: 5px;
-      border-radius: 4px;
-    }
-
-    .item-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 15px;
-    }
+    .item-value { color: var(--success-green); font-weight: bold; font-size: 18px; margin-bottom: 8px; }
+    .item-rap { color: var(--highlight-pink); font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+    
+    .item-stock { display: flex; align-items: center; margin-bottom: 8px; font-size: 14px; color: var(--gray-light); }
+    .stock-bar { flex-grow: 1; height: 8px; background-color: var(--gray-darker); border-radius: 4px; margin-left: 10px; overflow: hidden; }
+    .stock-fill { height: 100%; background-color: var(--accent-blue); width: 100%; }
+    
+    .item-owners { font-size: 14px; color: var(--gray-light); margin-top: 10px; }
+    .item-timer { font-size: 14px; font-weight: bold; color: var(--danger-red); margin-top: 10px; text-align: center; background-color: rgba(244, 100, 93, 0.1); padding: 5px; border-radius: 4px; }
+    .item-actions { display: flex; gap: 8px; margin-top: 15px; }
 
     .item-status {
       position: absolute;
       top: 10px;
       right: 10px;
-      background-color: var(--primary-blue);
+      background-color: var(--accent-blue);
       color: white;
       padding: 4px 8px;
       border-radius: 4px;
@@ -262,586 +220,133 @@
       font-weight: bold;
     }
 
-    /* Leaderboard Styles */
-    .leaderboard-tabs {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid var(--border-color);
+    /* Leaderboard */
+    .leaderboard-tabs { display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }
+    .leaderboard-tab { padding: 10px 20px; background-color: var(--background-card); border: none; border-radius: var(--radius); color: var(--primary-text); cursor: pointer; transition: all 0.2s; font-weight: 600; }
+    .leaderboard-tab.active { background-color: var(--accent-blue); color: white; }
+    .leaderboard-tab:hover { background-color: var(--gray-dark); }
+    
+    .leaderboard-table { width: 100%; border-collapse: collapse; border-radius: var(--radius); overflow: hidden; }
+    .leaderboard-table th { background-color: var(--background-panel); padding: 15px; text-align: left; font-weight: bold; }
+    .leaderboard-table td { padding: 15px; border-bottom: 1px solid var(--border-color); background-color: var(--background-card); }
+    .leaderboard-table tr:hover td { background-color: var(--gray-dark); }
+    
+    .leaderboard-rank { font-weight: bold; color: var(--accent-blue); width: 50px; }
+    .leaderboard-name { font-weight: bold; }
+    .leaderboard-value { color: var(--success-green); font-weight: bold; }
+    .leaderboard-rap { color: var(--highlight-pink); font-weight: bold; }
+
+    /* Popups */
+    .popup-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .popup-overlay.active { opacity: 1; pointer-events: all; }
+    .popup-content { background-color: var(--background-panel); border-radius: var(--radius); width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; padding: 30px; box-shadow: var(--shadow); transform: translateY(20px); transition: transform 0.3s; border: 1px solid var(--border-color); }
+    .popup-overlay.active .popup-content { transform: translateY(0); }
+    .popup-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }
+    .popup-title { font-size: 24px; font-weight: bold; margin: 0; color: var(--accent-blue); }
+    .popup-close { background: none; border: none; color: var(--gray-light); font-size: 28px; cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s; }
+    .popup-close:hover { color: var(--primary-text); }
+
+    /* Forms */
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; margin-bottom: 8px; font-weight: bold; color: var(--primary-text); }
+    .form-control { width: 100%; padding: 12px; background-color: var(--gray-darker); border: 1px solid var(--border-color); border-radius: var(--radius); color: var(--primary-text); font-size: 16px; transition: border-color 0.2s; }
+    .form-control:focus { outline: none; border-color: var(--accent-blue); }
+    
+    .popup-footer { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+
+    /* AI Profile */
+    .ai-profile { text-align: center; }
+    .ai-avatar { width: 120px; height: 120px; border-radius: 50%; background-color: var(--accent-blue); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: bold; border: 3px solid var(--accent-blue); }
+    .ai-stats { display: flex; justify-content: space-around; margin: 30px 0; background-color: var(--background-card); padding: 20px; border-radius: var(--radius); }
+    .stat-box { text-align: center; padding: 0 15px; }
+    .stat-value { font-size: 28px; font-weight: bold; color: var(--accent-blue); margin-bottom: 5px; }
+    .stat-label { font-size: 16px; color: var(--gray-light); }
+    
+    .ai-inventory { margin-top: 20px; }
+    .inventory-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+    #ai-inventory-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; max-height: 350px; overflow-y: auto; padding: 5px; }
+    
+    .badge-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 20px 0; }
+    .badge { background-color: var(--background-card); color: var(--primary-text); padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 6px; }
+    .badge.rank-badge { border-color: var(--accent-blue); }
+    .badge.value-badge { border-color: var(--success-green); }
+    .badge.item-badge { border-color: var(--highlight-pink); }
+
+    .inventory-item { background-color: var(--gray-dark); border-radius: var(--radius); padding: 15px; text-align: center; transition: transform 0.2s; border: 1px solid var(--gray-mid); position: relative; }
+    .inventory-item:hover { transform: translateY(-3px); border-color: var(--accent-blue); }
+    .inventory-item img { width: 100%; height: 100px; object-fit: cover; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--gray-mid); }
+    .inventory-item-limited-icon { position: absolute; top: 90px; left: 20px; font-size: 24px; text-shadow: 0 0 5px rgba(0,0,0,0.8); pointer-events: none; }
+    .inventory-item-name { font-size: 16px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
+    .inventory-item-value { font-size: 14px; color: var(--success-green); margin-bottom: 5px; }
+    .inventory-item-rap { font-size: 14px; color: var(--highlight-pink); margin-bottom: 5px; }
+    .inventory-item-serial { font-size: 12px; color: var(--gray-light); margin-top: 8px; }
+
+    /* Reports */
+    .report-list { display: flex; flex-direction: column; gap: 15px; }
+    .report-card { background-color: var(--background-card); border-radius: var(--radius); padding: 20px; border-left: 5px solid #ff9800; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
+    .report-card:hover { background-color: var(--gray-dark); border-left-color: var(--accent-blue); }
+    .report-card.unread { border-left-color: var(--danger-red); }
+    .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .report-user { font-weight: bold; font-size: 18px; }
+    .report-time { font-size: 14px; color: var(--gray-light); }
+    .report-reason { font-style: italic; }
+
+    /* Ban Land */
+    .ban-land-list { width: 100%; border-collapse: collapse; }
+    .ban-land-list th, .ban-land-list td { padding: 15px; border-bottom: 1px solid var(--border-color); text-align: left; }
+    .ban-land-list th { background-color: var(--background-panel); }
+    .ban-land-list tr:hover td { background-color: var(--gray-dark); }
+
+    /* Trades */
+    .trade-history-list { width: 100%; border-collapse: collapse; }
+    .trade-history-list td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+    .trade-participants { font-weight: bold; }
+    .trade-items { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+    .trade-item { display: flex; align-items: center; gap: 8px; }
+    .trade-item img { width: 32px; height: 32px; border-radius: 4px; }
+    .trade-total { margin-top: 10px; font-weight: bold; font-size: 14px; text-align: right; padding-top: 8px; border-top: 1px solid var(--gray-dark); }
+    .trade-card { background-color: var(--background-card); border-radius: var(--radius); padding: 20px; margin-bottom: 15px; display: flex; align-items: center; gap: 20px; }
+    .trade-side { flex: 1; }
+    .trade-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .trade-card-user { font-size: 18px; font-weight: bold; }
+
+    /* Admin Panel */
+    .admin-panel-form { display: flex; flex-direction: column; gap: 20px; max-width: 500px; background-color: var(--background-card); padding: 25px; border-radius: var(--radius); }
+    .settings-panel { display: flex; flex-direction: column; gap: 20px; max-width: 500px; }
+
+    /* Indicators */
+    .nav-button-container { position: relative; }
+    .report-indicator { position: absolute; top: 5px; right: 5px; width: 10px; height: 10px; background-color: var(--danger-red); border-radius: 50%; display: none; }
+    .report-indicator.active { display: block; }
+
+    /* Chart.js overrides */
+    #item-stats-demand { color: var(--accent-blue) !important; font-weight: bold;}
+    #item-stats-op { color: var(--success-green) !important; font-weight: bold;}
+
+    .value-history-chart-container,
+    .ai-chart-container {
+        position: relative;
+        height: 250px;
+        width: 100%;
+        background-color: var(--background-card);
+        border-radius: var(--radius);
+        padding: 15px;
     }
 
-    .leaderboard-tab {
-      padding: 10px 20px;
-      background-color: var(--background-light);
-      border: none;
-      border-radius: 6px;
-      color: var(--text-primary);
-      cursor: pointer;
-      transition: all 0.2s;
-      font-weight: 600;
-    }
-
-    .leaderboard-tab.active {
-      background-color: var(--primary-blue);
-      color: white;
-    }
-
-    .leaderboard-tab:hover {
-      background-color: #333;
-    }
-
-    .leaderboard-table {
-      width: 100%;
-      border-collapse: collapse;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    }
-
-    .leaderboard-table th {
-      background-color: var(--primary-blue);
-      padding: 15px;
-      text-align: left;
-      font-weight: bold;
-    }
-
-    .leaderboard-table td {
-      padding: 15px;
-      border-bottom: 1px solid var(--border-color);
-      background-color: var(--background-light);
-    }
-
-    .leaderboard-table tr:hover {
-      background-color: rgba(0, 162, 255, 0.1);
-      cursor: pointer;
-    }
-
-    .leaderboard-rank {
-      font-weight: bold;
-      color: var(--primary-blue);
-      width: 50px;
-    }
-
-    .leaderboard-name {
-      font-weight: bold;
-    }
-
-    .leaderboard-value {
-      color: var(--value-green);
-      font-weight: bold;
-    }
-
-    .leaderboard-rap {
-      color: var(--rap-yellow);
-      font-weight: bold;
-    }
-
-    /* Popup Styles */
-    .popup-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s;
-    }
-
-    .popup-overlay.active {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .popup-content {
-      background-color: var(--background-darker);
-      border-radius: 10px;
-      width: 90%;
-      max-width: 600px;
-      max-height: 80vh;
-      overflow-y: auto;
-      padding: 30px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-      transform: translateY(20px);
-      transition: transform 0.3s;
-      border: 1px solid var(--border-color);
-    }
-
-    .popup-overlay.active .popup-content {
-      transform: translateY(0);
-    }
-
-    .popup-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .popup-title {
-      font-size: 24px;
-      font-weight: bold;
-      margin: 0;
-      color: var(--primary-blue);
-    }
-
-    .popup-close {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 28px;
-      cursor: pointer;
-      padding: 0;
-      line-height: 1;
-      transition: color 0.2s;
-    }
-
-    .popup-close:hover {
-      color: var(--text-primary);
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: bold;
-      color: var(--text-primary);
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 12px;
-      background-color: var(--background-light);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      color: var(--text-primary);
-      font-size: 16px;
-      transition: border-color 0.2s;
-    }
-
-    .form-control:focus {
-      outline: none;
-      border-color: var(--primary-blue);
-      box-shadow: 0 0 0 2px rgba(0, 162, 255, 0.2);
-    }
-
-    .popup-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 15px;
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    /* AI Profile Styles */
-    .ai-profile {
-      text-align: center;
-    }
-
-    .ai-avatar {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background-color: var(--primary-blue);
-      margin: 0 auto 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 48px;
-      font-weight: bold;
-      box-shadow: 0 0 20px rgba(0, 162, 255, 0.3);
-      border: 3px solid var(--light-blue);
-    }
-
-    .ai-stats {
-      display: flex;
-      justify-content: space-around;
-      margin: 30px 0;
-      background-color: var(--background-light);
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    }
-
-    .stat-box {
-      text-align: center;
-      padding: 0 15px;
-    }
-
-    .stat-value {
-      font-size: 28px;
-      font-weight: bold;
-      color: var(--primary-blue);
-      margin-bottom: 5px;
-    }
-
-    .stat-label {
-      font-size: 16px;
-      color: var(--text-secondary);
-    }
-
-    .ai-inventory {
-      margin-top: 20px;
-    }
-
-    .inventory-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    #ai-inventory-items {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 20px;
-      max-height: 350px;
-      overflow-y: auto;
-      padding: 5px;
-    }
-
-    .badge-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-      margin: 20px 0;
-    }
-
-    .badge {
-      background-color: var(--background-light);
-      color: var(--text-primary);
-      padding: 5px 12px;
-      border-radius: 15px;
-      font-size: 12px;
-      font-weight: bold;
-      border: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      transition: transform 0.2s;
-    }
-
-    .badge:hover {
-      transform: translateY(-2px);
+    /* Responsive styles - simplified for brevity */
+    @media (max-width: 768px) {
+      header { flex-direction: column; gap: 15px; padding: 15px; }
+      nav { width: 100%; justify-content: center; flex-wrap: wrap; }
+      .item-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+      .ai-stats { flex-direction: column; gap: 20px; }
     }
     
-    .badge.rank-badge { border-color: var(--primary-blue); }
-    .badge.value-badge { border-color: var(--value-green); }
-    .badge.item-badge { border-color: var(--rap-yellow); }
-
-    .inventory-item img {
-      width: 100%;
-      height: 100px;
-      object-fit: cover;
-      border-radius: 6px;
-      margin-bottom: 12px;
-      border: 1px solid var(--border-color);
-    }
-
-    .inventory-item-limited-icon {
-      position: absolute;
-      top: 90px;
-      left: 20px;
-      font-size: 24px;
-      text-shadow: 0 0 5px rgba(0,0,0,0.8);
-      pointer-events: none; /* So it doesn't interfere with clicks on the image */
-    }
-
-    .inventory-item-name {
-      font-size: 16px;
-      font-weight: bold;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 5px;
-    }
-
-    .inventory-item-value {
-      font-size: 14px;
-      color: var(--value-green);
-      margin-bottom: 5px;
-    }
-
-    .inventory-item-rap {
-      font-size: 14px;
-      color: var(--rap-yellow);
-      margin-bottom: 5px;
-    }
-
-    .inventory-item-serial {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-top: 8px;
-    }
-
-    .inventory-item {
-      background-color: var(--background-light);
-      border-radius: 8px;
-      padding: 15px;
-      text-align: center;
-      transition: transform 0.2s;
-      border: 1px solid var(--border-color);
-      position: relative;
-    }
-
-    .inventory-item:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .item-grid {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      }
-      
-      header {
-        flex-direction: column;
-        gap: 15px;
-        padding: 15px;
-      }
-      
-      nav {
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      
-      .ai-stats {
-        flex-direction: column;
-        gap: 20px;
-      }
-
-      .inventory-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      }
-    }
-
     @media (max-width: 480px) {
       .item-grid {
         grid-template-columns: 1fr;
       }
-
-      .popup-content {
-        padding: 20px;
-      }
-
-      .leaderboard-table th,
-      .leaderboard-table td {
-        padding: 10px;
-      }
-    }
-
-    .report-list {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .report-card {
-      background-color: var(--background-light);
-      border-radius: 8px;
-      padding: 20px;
-      border-left: 5px solid var(--warning-orange);
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    .report-card:hover {
-      background-color: #3a3a3a;
-    }
-
-    .report-card.unread {
-      border-left-color: var(--danger-red);
-      animation: pulse-border 1.5s infinite;
-    }
-
-    @keyframes pulse-border {
-      0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
-      70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
-    }
-
-    .report-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    
-    .report-user { font-weight: bold; font-size: 18px; }
-    .report-time { font-size: 14px; color: var(--text-secondary); }
-    .report-reason { font-style: italic; }
-
-    .ban-land-list {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .ban-land-list th, .ban-land-list td {
-      padding: 15px;
-      border-bottom: 1px solid var(--border-color);
-      text-align: left;
-    }
-
-    .ban-land-list th {
-      background-color: var(--primary-blue);
-    }
-    
-    .ban-land-list tr:hover {
-      background-color: rgba(0, 162, 255, 0.1);
-      cursor: pointer;
-    }
-
-    .trade-history-list {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .trade-history-list td {
-        padding: 15px;
-        border-bottom: 1px solid var(--border-color);
-        vertical-align: top;
-    }
-
-    .trade-participants {
-        font-weight: bold;
-    }
-
-    .trade-items {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        font-size: 14px;
-    }
-    
-    .trade-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .trade-item img {
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-    }
-
-    .trade-total {
-      margin-top: 10px;
-      font-weight: bold;
-      font-size: 14px;
-      text-align: right;
-      padding-top: 8px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .trade-card {
-        background-color: var(--background-light);
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-
-    .trade-side {
-        flex: 1;
-    }
-
-    .trade-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-
-    .trade-card-user {
-        font-size: 18px;
-        font-weight: bold;
-    }
-
-    .admin-panel-form {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        max-width: 500px;
-        background-color: var(--background-light);
-        padding: 25px;
-        border-radius: 8px;
-    }
-
-    .settings-panel {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        max-width: 500px;
-    }
-
-    .nav-button-container {
-      position: relative;
-    }
-
-    .report-indicator {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      width: 10px;
-      height: 10px;
-      background-color: var(--danger-red);
-      border-radius: 50%;
-      display: none; /* Hidden by default */
-    }
-
-    .report-indicator.active {
-      display: block;
-      animation: pulse-indicator 1.5s infinite;
-    }
-
-    @keyframes pulse-indicator {
-      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
-      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(244, 67, 54, 0); }
-      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
-    }
-
-    .item-image-container {
-      position: relative;
-    }
-    
-    .item-image-container .item-timer {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background-color: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-      border: 1px solid rgba(255,255,255,0.2);
-    }
-
-    .item-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 15px;
+      .popup-content { padding: 20px; }
+      .leaderboard-table th, .leaderboard-table td { padding: 10px; }
     }
   </style>
 </head>
@@ -866,6 +371,7 @@
     <div id="marketplace" class="tab-content active">
       <div class="marketplace-header">
         <h2>Marketplace</h2>
+        <input type="text" id="marketplace-search-input" class="form-control" placeholder="Search items..." style="max-width: 300px; margin-left: auto; margin-right: 20px;">
         <button class="btn" onclick="openItemPopup()">+ Release Item</button>
       </div>
       <div class="item-grid" id="item-list">
@@ -931,6 +437,7 @@
     <!-- Trades Tab -->
     <div id="trades" class="tab-content">
         <h2>Trade History</h2>
+        <input type="text" id="trade-history-search" class="form-control" placeholder="Search trades by username..." style="max-width: 300px; margin-bottom: 15px;">
         <div id="trade-history-list">
             <!-- Trade history will be dynamically inserted here -->
         </div>
@@ -1045,8 +552,19 @@
           <div class="inventory-header">
             <h4>Inventory (<span id="ai-inventory-count">0</span>)</h4>
           </div>
+          <input type="text" id="ai-inventory-search" class="form-control" placeholder="Search inventory..." style="margin-bottom: 10px;">
           <div class="inventory-grid" id="ai-inventory-items">
             <!-- AI inventory items will be inserted here -->
+          </div>
+        </div>
+        <div style="margin-top: 30px; display: flex; gap: 30px; flex-wrap: wrap; justify-content: center;">
+          <div style="flex: 1; min-width: 250px; max-width: 400px;">
+            <h4>Value History</h4>
+            <canvas id="ai-value-history-chart"></canvas>
+          </div>
+          <div style="flex: 1; min-width: 250px; max-width: 400px;">
+            <h4>RAP History</h4>
+            <canvas id="ai-rap-history-chart"></canvas>
           </div>
         </div>
       </div>
@@ -1076,7 +594,7 @@
       </div>
       <div style="margin-top: 25px;">
           <h4>Value History</h4>
-          <div style="position: relative; height: 250px; width: 100%;">
+          <div class="value-history-chart-container">
             <canvas id="value-history-chart"></canvas>
           </div>
       </div>
@@ -1086,7 +604,7 @@
   <script>
 // Game State
 const marketplace = [];
-const aiUsers = generateAIUsers(5000);
+const aiUsers = generateAIUsers(2500);
 let leaderboardType = 'value';
 let itemIdCounter = 1;
 let currentViewingAI = null;
@@ -1427,25 +945,31 @@ function openAIPopup(ai) {
   // Sort inventory by value (highest to lowest)
   const sortedInventory = [...inventory].sort((a, b) => b.item.value - a.item.value);
   
-  sortedInventory.forEach(item => {
-    const itemEl = document.createElement('div');
-    itemEl.className = 'inventory-item';
-
-    let limitedIconHTML = '';
-    if (item.item.initialStock <= 50) {
-        limitedIconHTML = `<div class="inventory-item-limited-icon">💎</div>`;
-    }
-
-    itemEl.innerHTML = `
-      ${limitedIconHTML}
-      <img src="${item.item.image}" alt="${item.item.name}">
-      <div class="inventory-item-name">${item.item.name}</div>
-      <div class="inventory-item-value">Value: R$ ${item.item.value.toLocaleString()}</div>
-      <div class="inventory-item-rap">RAP: R$ ${item.item.rap.toLocaleString()}</div>
-      <div class="inventory-item-serial">#${item.serialNumber}</div>
-    `;
-    inventoryGrid.appendChild(itemEl);
-  });
+  // --- Inventory Search/Filter ---
+  const aiInvSearchInput = document.getElementById('ai-inventory-search');
+  aiInvSearchInput.value = '';
+  function renderFilteredInventory() {
+    const filter = aiInvSearchInput.value.trim().toLowerCase();
+    inventoryGrid.innerHTML = '';
+    const filtered = filter ? sortedInventory.filter(item =>
+      item.item.name.toLowerCase().includes(filter)
+    ) : sortedInventory;
+    filtered.forEach(item => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'inventory-item';
+      let limitedIconHTML = '';
+      if (item.item.initialStock <= 50) {
+          limitedIconHTML = `<div class=\"inventory-item-limited-icon\">💎</div>`;
+      }
+      itemEl.innerHTML = `
+        ${limitedIconHTML}
+        <img src=\"${item.item.image}\" alt=\"${item.item.name}\">\n        <div class=\"inventory-item-name\">${item.item.name}</div>\n        <div class=\"inventory-item-value\">Value: R$ ${item.item.value.toLocaleString()}</div>\n        <div class=\"inventory-item-rap\">RAP: R$ ${item.item.rap.toLocaleString()}</div>\n        <div class=\"inventory-item-serial\">#${item.serialNumber}</div>\n      `;
+      inventoryGrid.appendChild(itemEl);
+    });
+    document.getElementById('ai-inventory-count').textContent = filtered.length;
+  }
+  aiInvSearchInput.oninput = renderFilteredInventory;
+  renderFilteredInventory();
 
   // Render Badges
   const badgeContainer = document.getElementById('ai-badge-container');
@@ -1787,12 +1311,22 @@ function distributeItem(item, quantity = null) {
 function renderMarketplace() {
   itemList.innerHTML = '';
   
-  if (marketplace.length === 0) {
-    itemList.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-secondary);">No items available in the marketplace yet.</p>';
+  const searchInput = document.getElementById('marketplace-search-input');
+  const filter = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  
+  const filteredMarketplace = filter 
+    ? marketplace.filter(item => item.name.toLowerCase().includes(filter))
+    : marketplace;
+
+  if (filteredMarketplace.length === 0) {
+    const emptyMessage = filter 
+      ? "No items found matching your search." 
+      : "No items available in the marketplace yet.";
+    itemList.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--gray-light);">${emptyMessage}</p>`;
     return;
   }
   
-  marketplace.forEach(item => {
+  filteredMarketplace.forEach(item => {
     const itemCard = document.createElement('div');
     itemCard.className = 'item-card';
     
@@ -1892,40 +1426,65 @@ function calculateAIRAP(ai) {
 
 // AI Generation
 function generateAIUsers(count) {
-  const adjectives = ["Super", "Cool", "Awesome", "Epic", "Happy", "Shadow", "Robo", "Cyber", "Ninja", "Lazy", "Pro", "Noob", "King", "Queen", "Silent", "Frosty", "Aqua", "Blaze", "Galactic", "Cosmic"];
-  const nouns = ["Gamer", "Builder", "Cat", "Dog", "Panda", "Dragon", "Knight", "Player", "Master", "Dude", "Girl", "Boy", "Warrior", "Legend", "Hunter", "Pilot", "Scout", "Wizard", "Titan", "Spectre"];
+    const prefixes = ["TheReal", "Its", "Official", "Just", "Mr", "Mrs", "Dr", "Xx"];
+    const suffixes = ["YT", "TV", "Pro", "HD", "Dev", "RBX", "Plays", "Lover", "Fan", "God", "King", "Queen", "Slayer"];
+    const words = [
+        // Nouns
+        "Gamer", "Builder", "Cat", "Dog", "Panda", "Dragon", "Knight", "Player", "Master", "Dude", "Girl", "Boy", "Warrior",
+        "Legend", "Hunter", "Pilot", "Scout", "Wizard", "Titan", "Spectre", "Shadow", "Robo", "Cyber", "Ninja", "King", "Queen",
+        "Agent", "Reaper", "Ghost", "Wolf", "Fox", "Lion", "Tiger", "Shark", "Phoenix", "Demon", "Angel", "Star", "Comet", "Galaxy",
+        // Adjectives
+        "Super", "Cool", "Awesome", "Epic", "Happy", "Lazy", "Pro", "Noob", "Silent", "Frosty", "Aqua", "Blaze", "Galactic", "Cosmic",
+        "Red", "Blue", "Green", "Golden", "Dark", "Light", "Ancient", "Future", "Crazy", "Silly", "Serious", "Funny", "Hyper",
+        // Verbs
+        "Mining", "Building", "Fighting", "Playing", "Exploring", "Racing", "Flying", "Jumping"
+    ];
 
-  const users = [];
-  const generatedNames = new Set();
+    const users = [];
+    const generatedNames = new Set();
 
-  while (users.length < count) {
-    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    let name;
+    const randomChoice = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const randomNum = (max) => Math.floor(Math.random() * max);
 
-    const patternType = Math.random();
-    if (patternType < 0.4) { // 40% chance: AdjNoun####
-      name = `${adj}${noun}${Math.floor(Math.random() * 1000) + 1}`;
-    } else if (patternType < 0.7) { // 30% chance: Adj_Noun_##
-      name = `${adj}_${noun}_${Math.floor(Math.random() * 100)}`;
-    } else if (patternType < 0.85) { // 15% chance: Noun####
-        name = `${noun}${Math.floor(Math.random() * 9000) + 1000}`;
-    } else if (patternType < 0.95) { // 10% chance: xX_NounAdj_Xx
-        name = `xX_${noun}${adj}Xx`;
-    } else { // 5% chance
-        name = `${noun}Lover${Math.floor(Math.random() * 300)}`;
+    while (users.length < count) {
+        let name;
+        const patternType = Math.random();
+
+        if (patternType < 0.25) { // 25% chance: WordWord#### (e.g., ShadowGamer1234)
+            name = `${randomChoice(words)}${randomChoice(words)}${randomNum(9999) + 1}`;
+        } else if (patternType < 0.45) { // 20% chance: Prefix_Word_Suffix (e.g., TheReal_Dragon_YT)
+            name = `${randomChoice(prefixes)}_${randomChoice(words)}_${randomChoice(suffixes)}`;
+        } else if (patternType < 0.60) { // 15% chance: Word####Suffix (e.g., Player1234Pro)
+            name = `${randomChoice(words)}${randomNum(5000)}${randomChoice(suffixes)}`;
+        } else if (patternType < 0.75) { // 15% chance: xXWordWordXx (e.g., xXWarriorLegendXx)
+            name = `xX${randomChoice(words)}${randomChoice(words)}Xx`;
+        } else if (patternType < 0.90) { // 15% chance: Word_Word_#### (e.g., Epic_Builder_2010)
+            name = `${randomChoice(words)}_${randomChoice(words)}_${1000 + randomNum(9012)}`;
+        } else { // 10% chance: PrefixWord####
+            name = `${randomChoice(prefixes)}${randomChoice(words)}${randomNum(1000)}`;
+        }
+
+        // Ensure name is within a reasonable length
+        if (name.length > 20) {
+            name = name.substring(0, 20);
+        }
+        
+        if (name.length < 3) {
+            name = `${name}${randomNum(100)}`; // Pad very short names
+        }
+
+        if (!generatedNames.has(name)) {
+            generatedNames.add(name);
+            users.push({
+                id: users.length + 1,
+                name: name,
+                inventory: [],
+                valueHistory: [],
+                rapHistory: [],
+                economicClass: Math.random()
+            });
+        }
     }
-
-    if (!generatedNames.has(name)) {
-      generatedNames.add(name);
-      users.push({
-        id: users.length + 1,
-        name: name,
-        inventory: [],
-        economicClass: Math.random()
-      });
-    }
-  }
   
   return users;
 }
@@ -2143,10 +1702,20 @@ function attemptCommonTrade() {
     const traderPool = aiUsers.filter(u => !u.isAdmin && u.inventory.length > 0);
     if (traderPool.length < 2) return;
 
-    const traderA = traderPool[Math.floor(Math.random() * traderPool.length)];
+    // Weighted random selection based on value
+    const totalValue = traderPool.reduce((sum, u) => sum + calculateAIValue(u), 0);
+    function weightedPick(pool) {
+      let r = Math.random() * totalValue;
+      for (const u of pool) {
+        r -= calculateAIValue(u);
+        if (r <= 0) return u;
+      }
+      return pool[pool.length - 1];
+    }
+    const traderA = weightedPick(traderPool);
     const traderBPool = traderPool.filter(u => u.id !== traderA.id && u.inventory.length > 0);
     if (traderBPool.length === 0) return;
-    const traderB = traderBPool[Math.floor(Math.random() * traderBPool.length)];
+    const traderB = weightedPick(traderBPool);
 
     negotiateAndExecuteTrade(traderA, traderB);
 }
@@ -2158,10 +1727,20 @@ function attemptHighValueTrade() {
 
     if (wealthyPool.length < 2) return; // Not enough wealthy players to trade
 
-    const traderA = wealthyPool[Math.floor(Math.random() * wealthyPool.length)];
+    // Weighted random selection based on value
+    const totalValue = wealthyPool.reduce((sum, u) => sum + calculateAIValue(u), 0);
+    function weightedPick(pool) {
+      let r = Math.random() * totalValue;
+      for (const u of pool) {
+        r -= calculateAIValue(u);
+        if (r <= 0) return u;
+      }
+      return pool[pool.length - 1];
+    }
+    const traderA = weightedPick(wealthyPool);
     const traderBPool = wealthyPool.filter(u => u.id !== traderA.id);
     if(traderBPool.length === 0) return;
-    const traderB = traderBPool[Math.floor(Math.random() * traderBPool.length)];
+    const traderB = weightedPick(traderBPool);
 
     negotiateAndExecuteTrade(traderA, traderB);
 }
@@ -2359,6 +1938,7 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
     }
     
     updateAllLeaderboards();
+    updateAIHistoryOnChange();
     if(document.getElementById('trades').classList.contains('active')) {
       renderTradeHistory();
     }
@@ -2382,38 +1962,28 @@ function generateTradeAlertReport(trade) {
 
 function renderTradeHistory() {
     tradeHistoryList.innerHTML = '';
-    if (tradeHistory.length === 0) {
+    const tradeSearchInput = document.getElementById('trade-history-search');
+    const filter = tradeSearchInput ? tradeSearchInput.value.trim().toLowerCase() : '';
+    const filteredTrades = filter ? tradeHistory.filter(trade => {
+        if (trade.traderA.name.toLowerCase().includes(filter) || trade.traderB.name.toLowerCase().includes(filter)) return true;
+        // Check items from both sides
+        const itemsA = trade.itemsFromA.some(i => i.item.name.toLowerCase().includes(filter));
+        const itemsB = trade.itemsFromB.some(i => i.item.name.toLowerCase().includes(filter));
+        return itemsA || itemsB;
+    }) : tradeHistory;
+    if (filteredTrades.length === 0) {
         tradeHistoryList.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--text-secondary);">No trades have occurred yet.</p>';
         return;
     }
-
-    tradeHistory.forEach(trade => {
+    filteredTrades.forEach(trade => {
         const tradeCard = document.createElement('div');
         tradeCard.className = 'trade-card';
-
         const valueFromA = trade.itemsFromA.reduce((sum, item) => sum + item.item.value, 0);
         const valueFromB = trade.itemsFromB.reduce((sum, item) => sum + item.item.value, 0);
-
-        const itemsFromA_HTML = trade.itemsFromA.map(i => `<div class="trade-item"><img src="${i.item.image}"> ${i.item.name} (#${i.serialNumber})<span class="leaderboard-value" style="margin-left: auto;">R$ ${i.item.value.toLocaleString()}</span></div>`).join('');
-        const itemsFromB_HTML = trade.itemsFromB.map(i => `<div class="trade-item"><img src="${i.item.image}"> ${i.item.name} (#${i.serialNumber})<span class="leaderboard-value" style="margin-left: auto;">R$ ${i.item.value.toLocaleString()}</span></div>`).join('');
-
+        const itemsFromA_HTML = trade.itemsFromA.map(i => `<div class=\"trade-item\"><img src=\"${i.item.image}\"> ${i.item.name} (#${i.serialNumber})<span class=\"leaderboard-value\" style=\"margin-left: auto;\">R$ ${i.item.value.toLocaleString()}</span></div>`).join('');
+        const itemsFromB_HTML = trade.itemsFromB.map(i => `<div class=\"trade-item\"><img src=\"${i.item.image}\"> ${i.item.name} (#${i.serialNumber})<span class=\"leaderboard-value\" style=\"margin-left: auto;\">R$ ${i.item.value.toLocaleString()}</span></div>`).join('');
         tradeCard.innerHTML = `
-            <div class="trade-side">
-                <div class="trade-card-header">
-                    <span class="trade-card-user">${trade.traderA.name}</span>
-                </div>
-                <div class="trade-items">${itemsFromA_HTML}</div>
-                <div class="trade-total leaderboard-value">Total: R$ ${valueFromA.toLocaleString()}</div>
-            </div>
-            <div style="font-size: 24px;">&#x21C4;</div>
-            <div class="trade-side">
-                <div class="trade-card-header">
-                     <span class="trade-card-user">${trade.traderB.name}</span>
-                </div>
-                <div class="trade-items">${itemsFromB_HTML}</div>
-                <div class="trade-total leaderboard-value">Total: R$ ${valueFromB.toLocaleString()}</div>
-            </div>
-        `;
+            <div class=\"trade-side\">\n                <div class=\"trade-card-header\">\n                    <span class=\"trade-card-user\">${trade.traderA.name}</span>\n                </div>\n                <div class=\"trade-items\">${itemsFromA_HTML}</div>\n                <div class=\"trade-total leaderboard-value\">Total: R$ ${valueFromA.toLocaleString()}</div>\n            </div>\n            <div style=\"font-size: 24px;\">&#x21C4;</div>\n            <div class=\"trade-side\">\n                <div class=\"trade-card-header\">\n                     <span class=\"trade-card-user\">${trade.traderB.name}</span>\n                </div>\n                <div class=\"trade-items\">${itemsFromB_HTML}</div>\n                <div class=\"trade-total leaderboard-value\">Total: R$ ${valueFromB.toLocaleString()}</div>\n            </div>\n        `;
         tradeHistoryList.appendChild(tradeCard);
     });
 }
@@ -2515,6 +2085,7 @@ function adminGiveItem() {
     userIdInput.value = '';
     alert(`Successfully gave "${itemTemplate.name}" to ${targetUser.name} (ID: ${targetUser.id}).`);
     updateAllLeaderboards();
+    updateAIHistoryOnChange();
 }
 
 // Initialize
@@ -2527,6 +2098,7 @@ renderBanLand();
 document.getElementById('leaderboard-search-input').addEventListener('input', (e) => {
     renderLeaderboard(e.target.value);
 });
+document.getElementById('marketplace-search-input').addEventListener('input', renderMarketplace);
 
 // --- Settings ---
 function exportData() {
@@ -2801,6 +2373,100 @@ function renderValueChart(item) {
             }
         }
     });
+}
+
+// Attach search event for trade history
+document.getElementById('trade-history-search').addEventListener('input', () => renderTradeHistory());
+
+// --- AI Value/RAP History Tracking ---
+function ensureAIHistory(ai) {
+  if (!ai.valueHistory) ai.valueHistory = [];
+  if (!ai.rapHistory) ai.rapHistory = [];
+}
+
+function recordAIHistory(ai) {
+  ensureAIHistory(ai);
+  const now = new Date();
+  const value = calculateAIValue(ai);
+  const rap = calculateAIRAP(ai);
+  ai.valueHistory.push({ date: now, value });
+  ai.rapHistory.push({ date: now, rap });
+  // Keep history to last 100 points for performance
+  if (ai.valueHistory.length > 100) ai.valueHistory = ai.valueHistory.slice(-100);
+  if (ai.rapHistory.length > 100) ai.rapHistory = ai.rapHistory.slice(-100);
+}
+
+function recordAllAIHistory() {
+  aiUsers.forEach(ai => recordAIHistory(ai));
+}
+
+// Start a timer to record all AI histories every 5 minutes
+setInterval(recordAllAIHistory, 5 * 60 * 1000);
+
+let aiValueChartInstance = null;
+let aiRAPChartInstance = null;
+function renderAICharts(ai) {
+  ensureAIHistory(ai);
+  const valueCtx = document.getElementById('ai-value-history-chart').getContext('2d');
+  const rapCtx = document.getElementById('ai-rap-history-chart').getContext('2d');
+  if (aiValueChartInstance) aiValueChartInstance.destroy();
+  if (aiRAPChartInstance) aiRAPChartInstance.destroy();
+  const valueHistory = ai.valueHistory || [];
+  const rapHistory = ai.rapHistory || [];
+  const valueLabels = valueHistory.map(e => new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+  const valueData = valueHistory.map(e => e.value);
+  aiValueChartInstance = new Chart(valueCtx, {
+    type: 'line',
+    data: {
+      labels: valueLabels,
+      datasets: [{
+        label: 'Value',
+        data: valueData,
+        borderColor: 'var(--primary-blue)',
+        backgroundColor: 'rgba(0,162,255,0.1)',
+        fill: true,
+        tension: 0.1,
+        pointRadius: 2,
+        pointBackgroundColor: 'var(--primary-blue)'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.2)' } },
+        x: { ticks: { color: 'white' }, grid: { display: false } }
+      }
+    }
+  });
+  const rapLabels = rapHistory.map(e => new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+  const rapData = rapHistory.map(e => e.rap);
+  aiRAPChartInstance = new Chart(rapCtx, {
+    type: 'line',
+    data: {
+      labels: rapLabels,
+      datasets: [{
+        label: 'RAP',
+        data: rapData,
+        borderColor: 'var(--rap-yellow)',
+        backgroundColor: 'rgba(255,204,0,0.1)',
+        fill: true,
+        tension: 0.1,
+        pointRadius: 2,
+        pointBackgroundColor: 'var(--rap-yellow)'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.2)' } },
+        x: { ticks: { color: 'white' }, grid: { display: false } }
+      }
+    }
+  });
 }
   </script>
 </body>
