@@ -198,7 +198,7 @@
       color: var(--primary-text);
     }
     .item-value { color: var(--success-green); font-weight: bold; font-size: 18px; margin-bottom: 8px; }
-    .item-rap { color: var(--highlight-pink); font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+    .item-rap { display: none; /* RAP is being removed */ }
     
     .item-stock { display: flex; align-items: center; margin-bottom: 8px; font-size: 14px; color: var(--gray-light); }
     .stock-bar { flex-grow: 1; height: 8px; background-color: var(--gray-darker); border-radius: 4px; margin-left: 10px; overflow: hidden; }
@@ -234,7 +234,7 @@
     .leaderboard-rank { font-weight: bold; color: var(--accent-blue); width: 50px; }
     .leaderboard-name { font-weight: bold; }
     .leaderboard-value { color: var(--success-green); font-weight: bold; }
-    .leaderboard-rap { color: var(--highlight-pink); font-weight: bold; }
+    .leaderboard-rap { display: none; /* RAP is being removed */ }
 
     /* Popups */
     .popup-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -385,7 +385,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
         <div class="leaderboard-tabs">
           <button class="leaderboard-tab active" onclick="switchLeaderboard('value')">Value</button>
-          <button class="leaderboard-tab" onclick="switchLeaderboard('rap')">RAP</button>
+          <button class="leaderboard-tab" onclick="switchLeaderboard('rap')" style="display: none;">RAP</button>
           <button class="leaderboard-tab" onclick="switchLeaderboard('items')">Items</button>
         </div>
         <input type="text" id="leaderboard-search-input" class="form-control" placeholder="Search users..." style="max-width: 300px;">
@@ -502,10 +502,10 @@
 
       <div id="collectible-fields">
         <div class="form-group">
-          <label class="form-label" for="item-value">Determined Value (R$)</label>
+          <label class="form-label" for="item-value">Initial Price (R$)</label>
           <input type="number" id="item-value" class="form-control" placeholder="1000" min="1">
         </div>
-        <div class="form-group">
+        <div class="form-group" style="display: none;">
           <label class="form-label" for="item-rap">Determined RAP (R$)</label>
           <input type="number" id="item-rap" class="form-control" placeholder="800" min="1">
         </div>
@@ -862,6 +862,7 @@ function switchLeaderboard(type) {
       leaderboardHeader.textContent = 'Value';
       break;
     case 'rap':
+      // This case is now obsolete but left for safety.
       leaderboardHeader.textContent = 'RAP';
       break;
     case 'items':
@@ -963,7 +964,7 @@ function openAIPopup(ai) {
       }
       itemEl.innerHTML = `
         ${limitedIconHTML}
-        <img src=\"${item.item.image}\" alt=\"${item.item.name}\">\n        <div class=\"inventory-item-name\">${item.item.name}</div>\n        <div class=\"inventory-item-value\">Value: R$ ${item.item.value.toLocaleString()}</div>\n        <div class=\"inventory-item-rap\">RAP: R$ ${item.item.rap.toLocaleString()}</div>\n        <div class=\"inventory-item-serial\">#${item.serialNumber}</div>\n      `;
+        <img src=\"${item.item.image}\" alt=\"${item.item.name}\">\n        <div class=\"inventory-item-name\">${item.item.name}</div>\n        <div class=\"inventory-item-value\">Value: R$ ${item.item.value.toLocaleString()} ${getValuationStatusIcon(item)}</div>\n        <div class=\"inventory-item-rap\" style="display:none;">RAP: R$ ${item.item.rap.toLocaleString()}</div>\n        <div class=\"inventory-item-serial\">#${item.serialNumber}</div>\n      `;
       inventoryGrid.appendChild(itemEl);
     });
     document.getElementById('ai-inventory-count').textContent = filtered.length;
@@ -1070,19 +1071,16 @@ function handleItemSubmit() {
   };
 
   if (!valueInput.value || valueInput.value < 1) {
-    alert('Please enter a valid value (minimum 1 R$)');
+    alert('Please enter a valid initial price (minimum 1 R$)');
     return;
   }
-  if (!rapInput.value || rapInput.value < 1) {
-    alert('Please enter a valid RAP (minimum 1 R$)');
-    return;
-  }
+  // RAP validation removed
   if (!stockInput.value || stockInput.value < 1) {
     alert('Please enter a valid stock amount (minimum 1)');
     return;
   }
   itemData.value = parseInt(valueInput.value);
-  itemData.rap = parseInt(rapInput.value);
+  // RAP assignment removed
   itemData.stock = parseInt(stockInput.value);
   itemData.initialStock = parseInt(stockInput.value);
 
@@ -1115,7 +1113,8 @@ function releaseItem(itemData) {
     isCollectible: true,
     createdAt: new Date(),
     value: itemData.value,
-    rap: itemData.rap,
+    initialPrice: itemData.value, // Store the initial price
+    rap: 0, // Set RAP to 0 or remove
     initialStock: itemData.stock,
     available: itemData.stock,
     serialNumbers: Array.from({length: itemData.stock}, (_, i) => i + 1)
@@ -1151,7 +1150,7 @@ function updateItem(itemId, updates) {
   
   const oldValue = item.value;
   item.value = updates.value;
-  item.rap = updates.rap;
+  item.rap = 0; // Set RAP to 0 or remove
 
   if (oldValue !== item.value) {
       if (!item.stats) { // For items created before this feature
@@ -1338,8 +1337,8 @@ function renderMarketplace() {
       <img src="${item.image}" alt="${item.name}" class="item-image">
       <div class="item-details">
         <div class="item-name">${item.name}</div>
-        <div class="item-value">Value: R$ ${item.value.toLocaleString()}</div>
-        <div class="item-rap">RAP: R$ ${item.rap.toLocaleString()}</div>
+        <div class="item-value">Value: R$ ${item.value.toLocaleString()} ${getValuationStatusIcon(item)}</div>
+        <div class="item-rap" style="display:none;">RAP: R$ ${item.rap.toLocaleString()}</div>
         <div class="item-stock">
           Stock: ${item.available}/${item.initialStock}
           <div class="stock-bar">
@@ -1415,14 +1414,7 @@ function calculateAIValue(ai) {
 }
 
 function calculateAIRAP(ai) {
-  if (ai.inventory.length === 0) return 0;
-  
-  let totalRAP = 0;
-  ai.inventory.forEach(item => {
-    totalRAP += item.item.rap;
-  });
-  
-  return totalRAP;
+  return 0; // RAP is removed.
 }
 
 // AI Generation
@@ -1748,87 +1740,71 @@ function attemptRandomTrade(isForced = false) {
 }
 
 function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
-    // --- Phase 1: Initiator Decides What They Want ---
-    const partnerInventory = [...partner.inventory];
-    let targetItem = null;
+    // --- Phase 1: Initiator Decides What They Want (Shopping List) ---
+    const partnerInventory = [...partner.inventory].sort((a,b) => getPerceivedValue(b.item) - getPerceivedValue(a.item));
+    let shoppingList = []; // The items the initiator wants from the partner
+    let shoppingListValue = 0;
 
-    // 25% chance to be 'curious' and seek out a newer item
-    if (Math.random() < 0.25) {
-        partnerInventory.sort((a, b) => b.item.id - a.item.id); // Sort by newest first
-        const initiatorTotalValue = calculateAIValue(initiator);
-        // Find a new-ish item they can reasonably afford
-        targetItem = partnerInventory.find(item => 
-            item.item.value < initiatorTotalValue * 0.9 && item.item.id > (itemIdCounter / 2)
-        );
+    // The initiator might want one big item or a few smaller ones.
+    const decision = Math.random();
+    if (decision < 0.7 && partnerInventory.length > 0) { // 70% chance to go for one big item
+        shoppingList.push(partnerInventory[0]);
+    } else { // 30% chance to go for a bundle of smaller/medium items
+        const initiatorValue = calculateAIValue(initiator);
+        const affordableItems = partnerInventory.filter(i => getPerceivedValue(i.item) < initiatorValue * 0.6);
+        affordableItems.sort(() => 0.5 - Math.random()); // Shuffle to get variety
+        for(const item of affordableItems) {
+            if (shoppingList.length >= 3) break; // Don't ask for too much at once
+            if (shoppingListValue + getPerceivedValue(item.item) < initiatorValue * 0.8) {
+                shoppingList.push(item);
+                shoppingListValue += getPerceivedValue(item.item);
+            }
+        }
     }
     
-    if (!targetItem) {
-        partnerInventory.sort((a,b) => b.item.value - a.item.value);
-        const initiatorBestItemValue = initiator.inventory.reduce((max, i) => Math.max(max, getPerceivedValue(i.item)), 0);
-        targetItem = partnerInventory.find(item => getPerceivedValue(item.item) > initiatorBestItemValue * 1.1);
-    }
+    if (shoppingList.length === 0) return false;
 
-    if (!targetItem) return false;
-    
     // --- Phase 2: Building the Deal ---
     let initiatorOffer = [];
-    let partnerOffer = [targetItem];
+    let partnerOffer = shoppingList; // Partner's side starts with the target items
     
     const initiatorTradableItems = initiator.inventory
-        .filter(i => i.item.id !== targetItem.item.id)
-        .sort((a,b) => getPerceivedValue(a.item) - getPerceivedValue(b.item)); // Sort low to high perceived value
+        .filter(i => !shoppingList.some(s => s.item.id === i.item.id))
+        .sort((a,b) => getPerceivedValue(a.item) - getPerceivedValue(b.item));
 
     let initiatorValue = 0;
-    let partnerValue = getPerceivedValue(targetItem.item);
+    let partnerValue = partnerOffer.reduce((sum, i) => sum + getPerceivedValue(i.item), 0);
 
     // Initiator builds an offer to match the partner's perceived value
     for (const item of initiatorTradableItems) {
         if (initiatorOffer.length >= 5) break;
-        if (initiatorValue >= partnerValue) break;
+        if (initiatorValue >= partnerValue * 1.05) break; // Aim for a slight overpay
         
-        // Add items until the offer is sufficient
         initiatorOffer.push(item);
         initiatorValue += getPerceivedValue(item.item);
     }
 
-    // --- Phase 3: Balancing the Trade (Counter-Offer) ---
-    const valueDifference = initiatorValue - partnerValue;
-    
-    // If initiator is overpaying significantly, they request an "add" from the partner
-    if (valueDifference > partnerValue * 0.2 && initiatorOffer.length < 5) { // OP by >20%
-        const partnerAddables = partner.inventory
-            .filter(i => !partnerOffer.some(o => o.serialNumber === i.serialNumber))
-            .sort((a,b) => getPerceivedValue(a.item) - getPerceivedValue(b.item));
-            
-        for (const addItem of partnerAddables) {
-            if (partnerOffer.length >= 5) break;
-            const addItemValue = getPerceivedValue(addItem.item);
-            // Find an add that helps balance the trade without flipping the overpay
-            if (addItemValue < valueDifference * 0.8) {
-                partnerOffer.push(addItem);
-                partnerValue += addItemValue;
-            }
-        }
-    }
-
     if (initiatorOffer.length === 0) return false;
 
-    // --- Phase 4: Final Evaluation ---
-    const finalInitiatorValue = initiatorOffer.reduce((s, i) => s + getPerceivedValue(i.item), 0);
-    const finalPartnerValue = partnerOffer.reduce((s, i) => s + getPerceivedValue(i.item), 0);
+    // --- Phase 3: Final Evaluation & Balancing ---
+    // This is a simplified final check. A real negotiation would be a loop.
+    const finalRatio = initiatorValue / partnerValue;
     
-    if (finalInitiatorValue === 0 || finalPartnerValue === 0) return false;
-
-    const finalRatio = finalInitiatorValue / finalPartnerValue;
-    
-    // Both sides must find the final deal acceptable based on perceived value
     let acceptanceChance = 0;
-    if (finalRatio < 0.95) acceptanceChance = 0.1;  // Unlikely to accept underpay
+    if (finalRatio < 0.98) acceptanceChance = 0.1;  // Unlikely to accept underpay
     else if (finalRatio < 1.2) acceptanceChance = 0.8; // Very likely to accept fair/slight OP
-    else acceptanceChance = 0.4; // Less likely to accept a huge OP (feels scammy/too good to be true)
+    else acceptanceChance = 0.4; // Less likely to accept a huge OP
 
     if (isForced) acceptanceChance = 1.0;
     
+    // The partner has a small chance to "get greedy" and ask for one more small item if the offer is good
+    if (Math.random() < 0.2 && finalRatio > 1.1 && initiatorTradableItems.length > initiatorOffer.length) {
+        const smallestAvailableItem = initiatorTradableItems.find(i => !initiatorOffer.some(o => o.serialNumber === i.serialNumber));
+        if (smallestAvailableItem && initiatorOffer.length < 5) {
+            initiatorOffer.push(smallestAvailableItem);
+        }
+    }
+
     if (Math.random() < acceptanceChance) {
         executeTrade(initiator, partner, initiatorOffer, partnerOffer);
         return true;
@@ -1886,6 +1862,9 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
     tradeHistory.unshift(trade);
     if (tradeHistory.length > 100) tradeHistory.pop(); // Keep history capped
 
+    // Update value based on trade performance for all involved items
+    allTradedItems.forEach(invItem => updateItemValueFromTrades(invItem.item));
+    
     // Check for high-value trade alert
     if (allTradedItems.some(i => i.item.value >= 500000)) {
         generateTradeAlertReport(trade);
@@ -2253,6 +2232,48 @@ function calculateDemand(item) {
     if (avgPayRatio > -0.04) return "Medium";   // Trades around value (-4% to 4%)
     if (avgPayRatio > -0.10) return "Low";      // Consistently gets <4% underpay
     return "Very Low"; // Consistently gets >10% underpay
+}
+
+function getValuationStatusIcon(item) {
+    if (!item.stats || item.stats.tradeCount < 10) {
+        return `<span title="Value is based on initial price. Market value will be determined after more trades." style="cursor: help; color: var(--gray-mid-light);">⚙️</span>`;
+    }
+    const trend = calculateItemTrend(item);
+    if (trend > 1.05) return `<span title="Value is trending up." style="color: var(--success-green);">📈</span>`;
+    if (trend < 0.95) return `<span title="Value is trending down." style="color: var(--danger-red);">📉</span>`;
+    return `<span title="Value is stable." style="color: var(--gray-light);">=</span>`;
+}
+
+function updateItemValueFromTrades(item) {
+    if (!item.stats || item.stats.tradeCount < 10) {
+        return; // Not enough data to adjust value yet
+    }
+    
+    // Calculate the average over/underpay percentage for this item
+    const avgPayRatio = item.stats.netPayRatioSum / item.stats.tradeCount;
+    
+    // Define an adjustment factor to prevent wild swings.
+    // A smaller factor makes the value more stable.
+    const adjustmentFactor = 0.05; 
+    
+    const change = item.value * avgPayRatio * adjustmentFactor;
+    
+    // New value must not fall below a certain threshold of its initial price, e.g., 25%
+    const floorValue = item.initialPrice * 0.25;
+    
+    let newValue = Math.max(floorValue, item.value + change);
+    
+    if (newValue !== item.value) {
+        item.value = Math.round(newValue);
+        
+        // After a value update, we should dampen the netPayRatioSum to prevent
+        // old trades from having a perpetual effect on the new value.
+        item.stats.netPayRatioSum *= 0.8; 
+
+        // Add to value history
+        item.stats.valueHistory.push({ date: new Date(), value: item.value });
+        if (item.stats.valueHistory.length > 100) item.stats.valueHistory.shift();
+    }
 }
 
 function renderValueChart(item) {
