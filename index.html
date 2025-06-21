@@ -1776,20 +1776,44 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
     // --- Phase 2: Initiator Builds an Offer ---
     let offerValue = 0;
     const offer = [];
-    const initiatorTradableItems = [...initiator.inventory].sort((a,b) => b.item.value - a.item.value);
+    const initiatorTradableItems = [...initiator.inventory].sort((a,b) => a.item.value - b.item.value); // Sort low to high
 
     // AI tries to build a package to meet the target value, with a slight overpay to entice
-    const targetValueWithOverpay = targetItem.item.value * (1.05 + Math.random() * 0.1); // 5-15% overpay
+    const targetValueWithOverpay = targetItem.item.value * (1.05 + Math.random() * 0.1); // 5-15% overpay target
 
+    // First, try to bundle smaller items that aren't a gross overpay on their own
     for (const item of initiatorTradableItems) {
         if (offerValue >= targetValueWithOverpay) break;
-        if (offer.length >= 6) break; // Don't offer too many items
-        
-        // Don't trade for the same item (e.g. Void Egg for Void Egg)
         if (item.item.id === targetItem.item.id) continue;
+        
+        // Only add items that are reasonably close to the target's value
+        if (item.item.value < targetItem.item.value * 2.0) {
+             offer.push(item);
+             offerValue += item.item.value * getStockMultiplier(item.item);
+        }
+    }
 
-        offer.push(item);
-        offerValue += item.item.value * getStockMultiplier(item.item);
+    // If the offer is still not enough, consider adding ONE larger item (a downgrade)
+    if (offerValue < targetValueWithOverpay) {
+        // Find the smallest "big" item that will seal the deal
+        const potentialDowngrades = initiatorTradableItems.filter(
+            i => !offer.some(o => o.serialNumber === i.serialNumber) && // not already in the offer
+                 i.item.id !== targetItem.item.id &&
+                 (i.item.value + offerValue) > targetValueWithOverpay // it must be enough
+        );
+        
+        if (potentialDowngrades.length > 0) {
+            const bestDowngrade = potentialDowngrades[0]; // Smallest of the big items
+            
+            // SANITY CHECK: Don't make a terrible trade.
+            // Is this single item worth more than 3x the target? If so, not worth it.
+            const isGrossOverpay = bestDowngrade.item.value > targetItem.item.value * 3;
+
+            if (!isGrossOverpay) {
+                offer.push(bestDowngrade);
+                offerValue += bestDowngrade.item.value * getStockMultiplier(bestDowngrade.item);
+            }
+        }
     }
 
     if (offerValue < targetItem.item.value * 0.9) {
