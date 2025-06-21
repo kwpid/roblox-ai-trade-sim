@@ -2305,8 +2305,13 @@ function updateItemValueFromTrades(item) {
     // Calculate the average over/underpay percentage from RECENT trades
     const avgPayRatio = recentTrades.reduce((sum, ratio) => sum + ratio, 0) / recentTrades.length;
     
-    // Define an adjustment factor to prevent wild swings.
-    const adjustmentFactor = 0.1; 
+    // The adjustment factor is now dynamic. 
+    // It's high for new items and decreases as the item becomes more established, making the value more stable over time.
+    const tradeCount = item.stats.tradeCount;
+    const baseFactor = 0.4; // The maximum rate of change for a new item.
+    const stabilityPoint = 200; // The number of trades at which the item's value becomes very stable.
+    const decay = Math.max(0.05, 1 - (tradeCount / stabilityPoint)); // Linearly decay until the stability point, then maintain a minimal change factor.
+    const adjustmentFactor = baseFactor * decay;
     
     const change = item.value * avgPayRatio * adjustmentFactor;
     
