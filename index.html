@@ -1684,16 +1684,56 @@ function getStockMultiplier(item) {
     return 1.0;
 }
 
+function attemptTopTierTrade() {
+    // Select from top 100 who have items to trade
+    const top100Pool = valueLeaderboard.slice(0, 100).filter(u => !u.isAdmin && u.inventory.length > 0);
+
+    if (top100Pool.length < 2) {
+        // Not enough rich players, fall back to a high-value trade
+        attemptHighValueTrade();
+        return;
+    }
+
+    // Weighted pick among the top players
+    const totalValue = top100Pool.reduce((sum, u) => sum + calculateAIValue(u), 0);
+    function weightedPick(pool) {
+        if (!pool || pool.length === 0) return null;
+        let r = Math.random() * totalValue;
+        for (const u of pool) {
+            r -= calculateAIValue(u);
+            if (r <= 0) return u;
+        }
+        return pool[pool.length - 1];
+    }
+
+    const traderA = weightedPick(top100Pool);
+    const traderBPool = top100Pool.filter(u => u.id !== traderA.id);
+    if (traderBPool.length === 0) {
+         attemptHighValueTrade(); // Fallback if we can't get a second trader
+         return;
+    }
+    const traderB = weightedPick(traderBPool);
+
+    if (traderA && traderB) {
+        negotiateAndExecuteTrade(traderA, traderB);
+    } else {
+        attemptHighValueTrade(); // Fallback
+    }
+}
+
 function attemptRandomTrade() {
     if (aiUsers.length < 2) return;
 
     const traderPool = aiUsers.filter(u => !u.isAdmin && u.inventory.length > 0);
     if (traderPool.length < 2) return;
 
-    // Decide if this is a high-value trade
-    if (Math.random() < 0.15) { // 15% chance for a high-value trade
+    // Decide what kind of trade to attempt
+    const tradeTypeRoll = Math.random();
+    if (tradeTypeRoll < 0.35) { // 35% chance for a top-tier trade
+        attemptTopTierTrade();
+    } else if (tradeTypeRoll < 0.60) { // 25% chance for a general high-value trade
         attemptHighValueTrade();
-    } else {
+    } else { // 40% chance for a common trade
         attemptCommonTrade();
     }
 }
