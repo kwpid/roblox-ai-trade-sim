@@ -2271,11 +2271,12 @@ function closeItemStatsPopup() {
 }
 
 function calculateDemand(item) {
-    if (!item.stats || item.stats.tradeCount < 5) {
+    const recentTrades = item.stats?.recentTradeRatios;
+    if (!recentTrades || recentTrades.length < 5) {
         return "N/A"; // Not enough data
     }
     
-    const avgPayRatio = item.stats.netPayRatioSum / item.stats.tradeCount;
+    const avgPayRatio = recentTrades.reduce((sum, ratio) => sum + ratio, 0) / recentTrades.length;
 
     if (avgPayRatio > 0.10) return "Very High"; // Consistently gets >10% overpay
     if (avgPayRatio > 0.04) return "High";      // Consistently gets >4% overpay
@@ -2285,7 +2286,7 @@ function calculateDemand(item) {
 }
 
 function getValuationStatusIcon(item) {
-    if (!item.stats || item.stats.tradeCount < 10) {
+    if (!item.stats || item.stats.tradeCount < 5) {
         return `<span title="Value is based on initial price. Market value will be determined after more trades." style="cursor: help; color: var(--gray-mid-light);">⚙️</span>`;
     }
     const trend = calculateItemTrend(item);
@@ -2313,10 +2314,11 @@ function updateItemValueFromTrades(item) {
     const floorValue = item.initialPrice * 0.25;
     
     let newValue = Math.max(floorValue, item.value + change);
+    const newRoundedValue = Math.round(newValue);
     
-    // Only update if the change is meaningful
-    if (Math.abs(newValue - item.value) >= 1) {
-        item.value = Math.round(newValue);
+    // Only update if the rounded value is different and positive
+    if (newRoundedValue !== item.value && newRoundedValue > 0) {
+        item.value = newRoundedValue;
 
         // Add to value history
         item.stats.valueHistory.push({ date: new Date(), value: item.value });
