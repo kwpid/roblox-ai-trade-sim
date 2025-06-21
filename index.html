@@ -2506,18 +2506,22 @@ function getPerceivedValue(item) {
     if (!item) return 0;
     let perceivedValue = item.value;
 
-    // 1. Stock Multiplier
+    // 1. Stock Multiplier (Now much more influential)
     const stock = item.initialStock;
-    if (stock <= 10) perceivedValue *= 1.4;       // Extremely rare
-    else if (stock <= 50) perceivedValue *= 1.25;  // Very rare
-    else if (stock <= 250) perceivedValue *= 1.1;   // Rare
+    let stockMultiplier = 1.0;
+    if (stock <= 10) stockMultiplier = 3.0;      // Dominus-level rarity
+    else if (stock <= 50) stockMultiplier = 2.2; // Very rare, high impact
+    else if (stock <= 150) stockMultiplier = 1.6; // Genuinely rare
+    else if (stock <= 500) stockMultiplier = 1.2; // Uncommon
     
-    // 2. Demand Multiplier
+    perceivedValue *= stockMultiplier;
+
+    // 2. Demand Multiplier (Slightly toned down to not overpower stock)
     const demand = calculateDemand(item);
-    if (demand === "Very High") perceivedValue *= 1.2;
-    else if (demand === "High") perceivedValue *= 1.1;
-    else if (demand === "Low") perceivedValue *= 0.9;
-    else if (demand === "Very Low") perceivedValue *= 0.8;
+    if (demand === "Very High") perceivedValue *= 1.15;
+    else if (demand === "High") perceivedValue *= 1.08;
+    else if (demand === "Low") perceivedValue *= 0.95;
+    else if (demand === "Very Low") perceivedValue *= 0.85;
 
     // 3. Trend Multiplier
     perceivedValue *= calculateItemTrend(item);
