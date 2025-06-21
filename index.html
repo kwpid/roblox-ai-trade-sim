@@ -1840,7 +1840,15 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
     const allTradedItems = [...itemsFromA, ...itemsFromB];
     for (const invItem of allTradedItems) {
          if (!invItem.item.stats) { // Initialize if not present for old data
-             invItem.item.stats = { tradeCount: 0, netPayRatioSum: 0, valueHistory: [{ date: new Date(), value: invItem.item.value }] };
+             invItem.item.stats = { 
+                tradeCount: 0, 
+                netPayRatioSum: 0, 
+                valueHistory: [{ date: new Date(), value: invItem.item.value }],
+                recentTradeRatios: [] 
+            };
+         }
+         if (!invItem.item.stats.recentTradeRatios) {
+             invItem.item.stats.recentTradeRatios = [];
          }
          invItem.item.stats.tradeCount++;
     }
@@ -1850,12 +1858,16 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
         const ratioForA = valueFromA / valueFromB; // How much A gave vs what B gave
         itemsFromB.forEach(invItem => { // Items B gave away
              invItem.item.stats.netPayRatioSum += (ratioForA - 1);
+             invItem.item.stats.recentTradeRatios.push(ratioForA - 1);
+             if (invItem.item.stats.recentTradeRatios.length > 20) invItem.item.stats.recentTradeRatios.shift();
         });
     }
     if (valueFromA > 0) {
         const ratioForB = valueFromB / valueFromA; // How much B gave vs what A gave
         itemsFromA.forEach(invItem => { // Items A gave away
             invItem.item.stats.netPayRatioSum += (ratioForB - 1);
+            invItem.item.stats.recentTradeRatios.push(ratioForB - 1);
+            if (invItem.item.stats.recentTradeRatios.length > 20) invItem.item.stats.recentTradeRatios.shift();
         });
     }
     
@@ -2283,16 +2295,17 @@ function getValuationStatusIcon(item) {
 }
 
 function updateItemValueFromTrades(item) {
-    if (!item.stats || item.stats.tradeCount < 10) {
-        return; // Not enough data to adjust value yet
+    const recentTrades = item.stats?.recentTradeRatios;
+    // Start updating after 5 recent trades have been recorded
+    if (!recentTrades || recentTrades.length < 5) {
+        return; 
     }
     
-    // Calculate the average over/underpay percentage for this item
-    const avgPayRatio = item.stats.netPayRatioSum / item.stats.tradeCount;
+    // Calculate the average over/underpay percentage from RECENT trades
+    const avgPayRatio = recentTrades.reduce((sum, ratio) => sum + ratio, 0) / recentTrades.length;
     
     // Define an adjustment factor to prevent wild swings.
-    // A smaller factor makes the value more stable.
-    const adjustmentFactor = 0.05; 
+    const adjustmentFactor = 0.1; 
     
     const change = item.value * avgPayRatio * adjustmentFactor;
     
@@ -2301,12 +2314,9 @@ function updateItemValueFromTrades(item) {
     
     let newValue = Math.max(floorValue, item.value + change);
     
-    if (newValue !== item.value) {
+    // Only update if the change is meaningful
+    if (Math.abs(newValue - item.value) >= 1) {
         item.value = Math.round(newValue);
-        
-        // After a value update, we should dampen the netPayRatioSum to prevent
-        // old trades from having a perpetual effect on the new value.
-        item.stats.netPayRatioSum *= 0.8; 
 
         // Add to value history
         item.stats.valueHistory.push({ date: new Date(), value: item.value });
