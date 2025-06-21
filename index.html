@@ -1793,14 +1793,16 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
 
     // For low-to-mid value trades, prevent extreme offers.
     if (totalTradeValue < 1_000_000) {
-        // Auto-decline if one side is offering more than 50% overpay, or receiving less than 80% of the value they're giving up.
-        if (exchangeRatio > 1.5 || exchangeRatio < 0.8) {
+        // Auto-decline if one side is offering more than 2x overpay, or receiving less than 60% of the value they're giving up.
+        // This is loosened to allow for perceived value to have a stronger influence.
+        if (exchangeRatio > 2.0 || exchangeRatio < 0.6) {
             return false;
         }
     }
     // For high-value trades, allow more flexibility but still prevent absurd trades.
     else {
-        if (exchangeRatio > 2.0 || exchangeRatio < 0.7) { // e.g. 2M for 1M is a potential deal, but 2.1M for 1M is not.
+        // e.g. 2.5M for 1M is a potential deal, but 2.6M for 1M is not.
+        if (exchangeRatio > 2.5 || exchangeRatio < 0.5) { 
             return false;
         }
     }
