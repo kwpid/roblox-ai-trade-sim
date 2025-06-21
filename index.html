@@ -1,0 +1,2807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roblox Item Distributor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary-blue: #00a2ff;
+      --dark-blue: #0066cc;
+      --light-blue: #66c2ff;
+      --background-dark: #1a1a1a;
+      --background-darker: #121212;
+      --background-light: #2a2a2a;
+      --text-primary: #ffffff;
+      --text-secondary: #cccccc;
+      --success-green: #4caf50;
+      --warning-orange: #ff9800;
+      --danger-red: #f44336;
+      --rap-yellow: #ffcc00;
+      --value-green: #00cc66;
+      --border-color: #333333;
+    }
+
+    body {
+      background-color: var(--background-dark);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: var(--background-darker);
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--primary-blue);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--primary-blue);
+      text-shadow: 0 0 10px rgba(0, 162, 255, 0.3);
+    }
+
+    nav {
+      display: flex;
+      gap: 15px;
+    }
+
+    nav button {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 16px;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+
+    nav button:hover {
+      background-color: rgba(0, 162, 255, 0.1);
+    }
+
+    nav button.active {
+      background-color: var(--primary-blue);
+      color: white;
+      box-shadow: 0 0 10px rgba(0, 162, 255, 0.5);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 25px;
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Marketplace Styles */
+    .marketplace-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .btn {
+      background-color: var(--primary-blue);
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+      font-size: 16px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn:hover {
+      background-color: var(--dark-blue);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-secondary {
+      background-color: var(--background-light);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background-color: #333;
+    }
+
+    .btn-danger {
+      background-color: var(--danger-red);
+    }
+
+    .btn-danger:hover {
+      background-color: #d32f2f;
+    }
+
+    .btn-warning {
+      background-color: var(--warning-orange);
+    }
+
+    .btn-warning:hover {
+      background-color: #e68a00;
+    }
+
+    .item-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 25px;
+    }
+
+    .item-card {
+      background-color: var(--background-light);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid var(--border-color);
+      position: relative;
+    }
+
+    .item-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .item-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .item-details {
+      padding: 18px;
+    }
+
+    .item-name {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-value {
+      color: var(--value-green);
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .item-rap {
+      color: var(--rap-yellow);
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .item-stock {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .stock-bar {
+      flex-grow: 1;
+      height: 8px;
+      background-color: #333;
+      border-radius: 4px;
+      margin-left: 10px;
+      overflow: hidden;
+    }
+
+    .stock-fill {
+      height: 100%;
+      background-color: var(--primary-blue);
+      width: 100%;
+    }
+
+    .item-owners {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 10px;
+    }
+
+    .item-timer {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--danger-red);
+      margin-top: 10px;
+      text-align: center;
+      background-color: rgba(244, 67, 54, 0.1);
+      padding: 5px;
+      border-radius: 4px;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    .item-status {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: var(--primary-blue);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    /* Leaderboard Styles */
+    .leaderboard-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .leaderboard-tab {
+      padding: 10px 20px;
+      background-color: var(--background-light);
+      border: none;
+      border-radius: 6px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+
+    .leaderboard-tab.active {
+      background-color: var(--primary-blue);
+      color: white;
+    }
+
+    .leaderboard-tab:hover {
+      background-color: #333;
+    }
+
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .leaderboard-table th {
+      background-color: var(--primary-blue);
+      padding: 15px;
+      text-align: left;
+      font-weight: bold;
+    }
+
+    .leaderboard-table td {
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--background-light);
+    }
+
+    .leaderboard-table tr:hover {
+      background-color: rgba(0, 162, 255, 0.1);
+      cursor: pointer;
+    }
+
+    .leaderboard-rank {
+      font-weight: bold;
+      color: var(--primary-blue);
+      width: 50px;
+    }
+
+    .leaderboard-name {
+      font-weight: bold;
+    }
+
+    .leaderboard-value {
+      color: var(--value-green);
+      font-weight: bold;
+    }
+
+    .leaderboard-rap {
+      color: var(--rap-yellow);
+      font-weight: bold;
+    }
+
+    /* Popup Styles */
+    .popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .popup-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .popup-content {
+      background-color: var(--background-darker);
+      border-radius: 10px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 30px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      transform: translateY(20px);
+      transition: transform 0.3s;
+      border: 1px solid var(--border-color);
+    }
+
+    .popup-overlay.active .popup-content {
+      transform: translateY(0);
+    }
+
+    .popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .popup-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0;
+      color: var(--primary-blue);
+    }
+
+    .popup-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 28px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+
+    .popup-close:hover {
+      color: var(--text-primary);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: var(--text-primary);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--background-light);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 2px rgba(0, 162, 255, 0.2);
+    }
+
+    .popup-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    /* AI Profile Styles */
+    .ai-profile {
+      text-align: center;
+    }
+
+    .ai-avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background-color: var(--primary-blue);
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      font-weight: bold;
+      box-shadow: 0 0 20px rgba(0, 162, 255, 0.3);
+      border: 3px solid var(--light-blue);
+    }
+
+    .ai-stats {
+      display: flex;
+      justify-content: space-around;
+      margin: 30px 0;
+      background-color: var(--background-light);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-box {
+      text-align: center;
+      padding: 0 15px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--primary-blue);
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 16px;
+      color: var(--text-secondary);
+    }
+
+    .ai-inventory {
+      margin-top: 20px;
+    }
+
+    .inventory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    #ai-inventory-items {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px;
+      max-height: 350px;
+      overflow-y: auto;
+      padding: 5px;
+    }
+
+    .badge-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .badge {
+      background-color: var(--background-light);
+      color: var(--text-primary);
+      padding: 5px 12px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+
+    .badge:hover {
+      transform: translateY(-2px);
+    }
+    
+    .badge.rank-badge { border-color: var(--primary-blue); }
+    .badge.value-badge { border-color: var(--value-green); }
+    .badge.item-badge { border-color: var(--rap-yellow); }
+
+    .inventory-item img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .inventory-item-limited-icon {
+      position: absolute;
+      top: 90px;
+      left: 20px;
+      font-size: 24px;
+      text-shadow: 0 0 5px rgba(0,0,0,0.8);
+      pointer-events: none; /* So it doesn't interfere with clicks on the image */
+    }
+
+    .inventory-item-name {
+      font-size: 16px;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 5px;
+    }
+
+    .inventory-item-value {
+      font-size: 14px;
+      color: var(--value-green);
+      margin-bottom: 5px;
+    }
+
+    .inventory-item-rap {
+      font-size: 14px;
+      color: var(--rap-yellow);
+      margin-bottom: 5px;
+    }
+
+    .inventory-item-serial {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    .inventory-item {
+      background-color: var(--background-light);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      transition: transform 0.2s;
+      border: 1px solid var(--border-color);
+      position: relative;
+    }
+
+    .inventory-item:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .item-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      }
+      
+      header {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+      }
+      
+      nav {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      
+      .ai-stats {
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .inventory-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      }
+    }
+
+    @media (max-width: 480px) {
+      .item-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .popup-content {
+        padding: 20px;
+      }
+
+      .leaderboard-table th,
+      .leaderboard-table td {
+        padding: 10px;
+      }
+    }
+
+    .report-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .report-card {
+      background-color: var(--background-light);
+      border-radius: 8px;
+      padding: 20px;
+      border-left: 5px solid var(--warning-orange);
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .report-card:hover {
+      background-color: #3a3a3a;
+    }
+
+    .report-card.unread {
+      border-left-color: var(--danger-red);
+      animation: pulse-border 1.5s infinite;
+    }
+
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+    }
+
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .report-user { font-weight: bold; font-size: 18px; }
+    .report-time { font-size: 14px; color: var(--text-secondary); }
+    .report-reason { font-style: italic; }
+
+    .ban-land-list {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .ban-land-list th, .ban-land-list td {
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+      text-align: left;
+    }
+
+    .ban-land-list th {
+      background-color: var(--primary-blue);
+    }
+    
+    .ban-land-list tr:hover {
+      background-color: rgba(0, 162, 255, 0.1);
+      cursor: pointer;
+    }
+
+    .trade-history-list {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .trade-history-list td {
+        padding: 15px;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: top;
+    }
+
+    .trade-participants {
+        font-weight: bold;
+    }
+
+    .trade-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 14px;
+    }
+    
+    .trade-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .trade-item img {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+    }
+
+    .trade-total {
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 14px;
+      text-align: right;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .trade-card {
+        background-color: var(--background-light);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .trade-side {
+        flex: 1;
+    }
+
+    .trade-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .trade-card-user {
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .admin-panel-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 500px;
+        background-color: var(--background-light);
+        padding: 25px;
+        border-radius: 8px;
+    }
+
+    .settings-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 500px;
+    }
+
+    .nav-button-container {
+      position: relative;
+    }
+
+    .report-indicator {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 10px;
+      height: 10px;
+      background-color: var(--danger-red);
+      border-radius: 50%;
+      display: none; /* Hidden by default */
+    }
+
+    .report-indicator.active {
+      display: block;
+      animation: pulse-indicator 1.5s infinite;
+    }
+
+    @keyframes pulse-indicator {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(244, 67, 54, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+    }
+
+    .item-image-container {
+      position: relative;
+    }
+    
+    .item-image-container .item-timer {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Roblox Item Distributor</div>
+    <nav>
+      <button class="active" onclick="switchTab('marketplace')">Marketplace</button>
+      <button onclick="switchTab('leaderboard')">Leaderboards</button>
+      <div class="nav-button-container">
+        <button onclick="switchTab('reports')">Reports</button>
+        <div id="report-indicator" class="report-indicator"></div>
+      </div>
+      <button onclick="switchTab('ban-land')">Ban Land</button>
+      <button onclick="switchTab('trades')">Trades</button>
+      <button onclick="switchTab('admin-panel')">Admin Panel</button>
+    </nav>
+  </header>
+
+  <div class="container">
+    <!-- Marketplace Tab -->
+    <div id="marketplace" class="tab-content active">
+      <div class="marketplace-header">
+        <h2>Marketplace</h2>
+        <button class="btn" onclick="openItemPopup()">+ Release Item</button>
+      </div>
+      <div class="item-grid" id="item-list">
+        <!-- Items will be dynamically inserted here -->
+      </div>
+    </div>
+
+    <!-- Leaderboard Tab -->
+    <div id="leaderboard" class="tab-content">
+      <h2>Leaderboards</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <div class="leaderboard-tabs">
+          <button class="leaderboard-tab active" onclick="switchLeaderboard('value')">Value</button>
+          <button class="leaderboard-tab" onclick="switchLeaderboard('rap')">RAP</button>
+          <button class="leaderboard-tab" onclick="switchLeaderboard('items')">Items</button>
+        </div>
+        <input type="text" id="leaderboard-search-input" class="form-control" placeholder="Search users..." style="max-width: 300px;">
+      </div>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th style="width: 60px;">Rank</th>
+            <th>Username</th>
+            <th id="leaderboard-header">Value</th>
+            <th style="width: 100px;">Items</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-list">
+          <!-- Leaderboard entries will be dynamically inserted here -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Reports Tab -->
+    <div id="reports" class="tab-content">
+        <div class="marketplace-header">
+            <h2>Reports</h2>
+            <button class="btn btn-warning" onclick="generateRandomReport()">+ Generate Report</button>
+        </div>
+        <div id="report-list" class="report-list">
+            <!-- Reports will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- Ban Land Tab -->
+    <div id="ban-land" class="tab-content">
+        <h2>Ban Land</h2>
+        <table id="banned-user-list" class="ban-land-list">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Ban Date</th>
+                    <th>Original Item Count</th>
+                    <th>Original Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Banned users will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Trades Tab -->
+    <div id="trades" class="tab-content">
+        <h2>Trade History</h2>
+        <div id="trade-history-list">
+            <!-- Trade history will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- Admin Panel Tab -->
+    <div id="admin-panel" class="tab-content">
+      <h2>Admin Panel</h2>
+      <div class="admin-panel-form">
+        <div class="form-group">
+          <label class="form-label" for="admin-user-id">User ID</label>
+          <input type="number" id="admin-user-id" class="form-control" placeholder="Enter User ID">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="admin-item-select">Item</label>
+          <select id="admin-item-select" class="form-control"></select>
+        </div>
+        <button class="btn" onclick="adminGiveItem()">Give Item to User</button>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settings" class="tab-content">
+      <h2>Settings</h2>
+      <div class="settings-panel">
+        <p>Export all current simulation data to a file. You can import this file later to restore the state.</p>
+        <button class="btn" onclick="exportData()">Export All Data</button>
+        <hr style="border-color: var(--border-color); width: 100%;">
+        <p>Import a previously exported data file. This will overwrite the current simulation state.</p>
+        <button class="btn btn-secondary" onclick="document.getElementById('import-file-input').click()">Import Data</button>
+        <input type="file" id="import-file-input" style="display: none;" accept=".json" onchange="importData(event)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Release Item Popup -->
+  <div class="popup-overlay" id="item-popup">
+    <div class="popup-content">
+      <div class="popup-header">
+        <h3 class="popup-title" id="item-popup-title">Release New Item</h3>
+        <button class="popup-close" onclick="closeItemPopup()">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Image Source</label>
+        <div style="display: flex; gap: 20px;">
+            <label style="cursor: pointer;"><input type="radio" name="image-source" value="upload" checked onchange="toggleImageSource(this.value)"> Upload</label>
+            <label style="cursor: pointer;"><input type="radio" name="image-source" value="url" onchange="toggleImageSource(this.value)"> URL</label>
+        </div>
+      </div>
+      <div id="image-upload-group" class="form-group">
+        <label class="form-label" for="item-image">Item Image</label>
+        <input type="file" id="item-image" class="form-control" accept="image/*">
+      </div>
+      <div id="image-url-group" class="form-group" style="display: none;">
+          <label class="form-label" for="item-image-url">Item Image URL</label>
+          <input type="text" id="item-image-url" class="form-control" placeholder="https://example.com/image.png">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="item-name">Item Name</label>
+        <input type="text" id="item-name" class="form-control" placeholder="Cool Hat">
+      </div>
+
+      <div id="collectible-fields">
+        <div class="form-group">
+          <label class="form-label" for="item-value">Determined Value (R$)</label>
+          <input type="number" id="item-value" class="form-control" placeholder="1000" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="item-rap">Determined RAP (R$)</label>
+          <input type="number" id="item-rap" class="form-control" placeholder="800" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="stock">Stock</label>
+          <input type="number" id="stock" class="form-control" placeholder="100" min="1">
+        </div>
+      </div>
+      
+      <div class="popup-footer">
+        <button class="btn" id="item-popup-submit" onclick="handleItemSubmit()">Release Item</button>
+        <button class="btn btn-secondary" onclick="closeItemPopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Profile Popup -->
+  <div class="popup-overlay" id="ai-popup">
+    <div class="popup-content">
+      <div class="popup-header">
+        <h3 class="popup-title" id="ai-profile-name">AI Profile</h3>
+        <button class="popup-close" onclick="closeAIPopup()">&times;</button>
+      </div>
+      <div class="ai-profile">
+        <div class="ai-avatar" id="ai-avatar">A</div>
+        <div id="ai-badge-container" class="badge-container">
+          <!-- Badges will be inserted here -->
+        </div>
+        <div class="ai-stats">
+          <div class="stat-box">
+            <div class="stat-value" id="ai-value">0</div>
+            <div class="stat-label">Value</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="ai-rap">0</div>
+            <div class="stat-label">RAP</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="ai-items">0</div>
+            <div class="stat-label">Items</div>
+          </div>
+        </div>
+        <div class="ai-inventory">
+          <div class="inventory-header">
+            <h4>Inventory (<span id="ai-inventory-count">0</span>)</h4>
+          </div>
+          <div class="inventory-grid" id="ai-inventory-items">
+            <!-- AI inventory items will be inserted here -->
+          </div>
+        </div>
+      </div>
+      <div class="popup-footer" id="ai-popup-footer">
+        <!-- AI action buttons will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Item Stats Popup -->
+  <div class="popup-overlay" id="item-stats-popup">
+    <div class="popup-content">
+      <div class="popup-header">
+        <h3 class="popup-title" id="item-stats-title">Item Statistics</h3>
+        <button class="popup-close" onclick="closeItemStatsPopup()">&times;</button>
+      </div>
+      <div id="item-stats-content" style="display: flex; gap: 30px; margin-top: 20px; flex-wrap: wrap;">
+          <div id="item-stats-details" style="flex: 1; min-width: 200px;">
+              <h4>Details</h4>
+              <p><strong>Demand:</strong> <span id="item-stats-demand" style="color: var(--primary-blue); font-weight: bold;">N/A</span></p>
+              <p><strong>Average Overpay:</strong> <span id="item-stats-op" style="color: var(--value-green); font-weight: bold;">N/A</span></p>
+              <p><strong>Times Traded:</strong> <span id="item-stats-trades" style="font-weight: bold;">0</span></p>
+          </div>
+          <div id="item-stats-image" style="flex: 0 0 150px;">
+              <img id="item-stats-img-src" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color);">
+          </div>
+      </div>
+      <div style="margin-top: 25px;">
+          <h4>Value History</h4>
+          <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="value-history-chart"></canvas>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+// Game State
+const marketplace = [];
+const aiUsers = generateAIUsers(5000);
+let leaderboardType = 'value';
+let itemIdCounter = 1;
+let currentViewingAI = null;
+let editingItemId = null;
+
+// Leaderboard state
+let valueLeaderboard = [];
+let rapLeaderboard = [];
+let itemsLeaderboard = [];
+
+// Report state
+const reports = [];
+let reportIdCounter = 1;
+const bannedUsers = [];
+const tradeHistory = [];
+let masterTimer;
+
+// DOM Elements
+const marketplaceTab = document.getElementById('marketplace');
+const leaderboardTab = document.getElementById('leaderboard');
+const itemList = document.getElementById('item-list');
+const leaderboardList = document.getElementById('leaderboard-list');
+const leaderboardHeader = document.getElementById('leaderboard-header');
+const itemPopup = document.getElementById('item-popup');
+const aiPopup = document.getElementById('ai-popup');
+const aiPopupFooter = document.getElementById('ai-popup-footer');
+const reportList = document.getElementById('report-list');
+const reportIndicator = document.getElementById('report-indicator');
+const bannedUserList = document.getElementById('banned-user-list').getElementsByTagName('tbody')[0];
+const tradeHistoryList = document.getElementById('trade-history-list');
+const adminItemSelect = document.getElementById('admin-item-select');
+const itemStatsPopup = document.getElementById('item-stats-popup');
+let valueChartInstance = null;
+
+const BADGE_DEFINITIONS = {
+    VALUE: [
+        { value: 100_000_000, name: '100M+ Value', icon: '💰' },
+        { value: 50_000_000, name: '50M+ Value', icon: '💰' },
+        { value: 10_000_000, name: '10M+ Value', icon: '💰' },
+        { value: 1_000_000, name: '1M+ Value', icon: '💰' },
+        { value: 500_000, name: '500K+ Value', icon: '💰' },
+        { value: 100_000, name: '100K+ Value', icon: '💰' },
+    ],
+    RANK: [
+        { rank: 1, name: 'Top 1', icon: '🥇' },
+        { rank: 3, name: 'Top 3', icon: '🥉' },
+        { rank: 10, name: 'Top 10', icon: '⭐' },
+        { rank: 25, name: 'Top 25', icon: '⭐' },
+        { rank: 50, name: 'Top 50', icon: '⭐' },
+        { rank: 100, name: 'Top 100', icon: '⭐' },
+    ],
+    ITEM: [
+        { keyword: 'Dominus', name: 'Dominus Owner', icon: '👑' },
+        { keyword: 'Federation', name: 'Federation Owner', icon: '🚀' },
+        { keyword: 'Sparkle', name: 'Sparkle Time', icon: '✨' },
+    ]
+};
+
+function getAIBadges(ai) {
+    const badges = [];
+    const value = calculateAIValue(ai);
+
+    // Value badges
+    for (const badge of BADGE_DEFINITIONS.VALUE) {
+        if (value >= badge.value) {
+            badges.push({ ...badge, type: 'value-badge' });
+            break; 
+        }
+    }
+
+    // Rank badges
+    const valueRank = valueLeaderboard.findIndex(u => u.id === ai.id) + 1;
+    const rapRank = rapLeaderboard.findIndex(u => u.id === ai.id) + 1;
+    const itemsRank = itemsLeaderboard.findIndex(u => u.id === ai.id) + 1;
+    const bestRank = Math.min(
+        valueRank > 0 ? valueRank : Infinity,
+        rapRank > 0 ? rapRank : Infinity,
+        itemsRank > 0 ? itemsRank : Infinity
+    );
+
+    if (bestRank !== Infinity) {
+         for (const badge of BADGE_DEFINITIONS.RANK) {
+            if (bestRank <= badge.rank) {
+                badges.push({ ...badge, type: 'rank-badge' });
+                break; 
+            }
+        }
+    }
+
+    // Item badges
+    const ownedItemNames = new Set(ai.inventory.map(i => i.item.name.toLowerCase()));
+    const awardedItemBadges = new Set();
+    
+    for (const badge of BADGE_DEFINITIONS.ITEM) {
+        if (awardedItemBadges.has(badge.name)) continue;
+
+        for (const itemName of ownedItemNames) {
+            if (itemName.includes(badge.keyword.toLowerCase())) {
+                badges.push({ ...badge, type: 'item-badge' });
+                awardedItemBadges.add(badge.name);
+                break;
+            }
+        }
+    }
+
+    return badges;
+}
+
+// ROBLOX Admin Account
+const robloxAdmin = {
+  id: 0,
+  name: "ROBLOX",
+  inventory: [],
+  economicClass: 1, // Max economic class for higher chance of rare items if ever needed
+  isAdmin: true
+};
+aiUsers.unshift(robloxAdmin);
+
+function banAI(aiToBan) {
+  if (aiToBan.isAdmin) {
+    alert("Cannot ban the admin account.");
+    return;
+  }
+  
+  const admin = aiUsers.find(ai => ai.isAdmin);
+  const inventorySnapshot = [...aiToBan.inventory];
+
+  if (admin && aiToBan.inventory.length > 0) {
+    admin.inventory.push(...aiToBan.inventory);
+  }
+
+  const userIndex = aiUsers.findIndex(user => user.id === aiToBan.id);
+  if (userIndex > -1) {
+    const [bannedUser] = aiUsers.splice(userIndex, 1);
+
+    bannedUsers.unshift({
+        ...bannedUser,
+        inventory: [], // Clear their live inventory
+        bannedInventory: inventorySnapshot,
+        banDate: new Date(),
+        isBanned: true,
+    });
+  }
+
+  closeAIPopup();
+  updateAllLeaderboards();
+  renderBanLand();
+  alert(`${aiToBan.name} has been banned. Their items have been transferred to ${admin.name}.`);
+}
+
+function unbanAI(userToUnban, restoreItems) {
+    const bannedUserIndex = bannedUsers.findIndex(u => u.id === userToUnban.id);
+    if (bannedUserIndex === -1) return;
+
+    const [unbannedUser] = bannedUsers.splice(bannedUserIndex, 1);
+
+    // Clean up banned properties
+    delete unbannedUser.isBanned;
+    delete unbannedUser.banDate;
+    
+    if (restoreItems) {
+        const admin = aiUsers.find(ai => ai.isAdmin);
+        const itemsToRestore = [...unbannedUser.bannedInventory];
+        
+        unbannedUser.inventory = itemsToRestore;
+
+        if (admin) {
+             const restoredSerials = new Set(itemsToRestore.map(i => `${i.item.id}-${i.serialNumber}`));
+             admin.inventory = admin.inventory.filter(i => !restoredSerials.has(`${i.item.id}-${i.serialNumber}`));
+        }
+    } else {
+        unbannedUser.inventory = [];
+    }
+
+    delete unbannedUser.bannedInventory;
+    aiUsers.push(unbannedUser);
+
+    closeAIPopup();
+    updateAllLeaderboards();
+    renderBanLand();
+    alert(`${unbannedUser.name} has been unbanned.`);
+}
+
+function renderBanLand() {
+    bannedUserList.innerHTML = '';
+    if (bannedUsers.length === 0) {
+        bannedUserList.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">No users have been banned.</td></tr>';
+        return;
+    }
+    
+    bannedUsers.forEach(user => {
+        const row = document.createElement('tr');
+        row.onclick = () => openAIPopup(user);
+
+        const originalValue = user.bannedInventory.reduce((sum, i) => sum + i.item.value, 0);
+
+        row.innerHTML = `
+            <td>${user.name}</td>
+            <td>${user.banDate.toLocaleDateString()} ${user.banDate.toLocaleTimeString()}</td>
+            <td>${user.bannedInventory.length}</td>
+            <td class="leaderboard-value">R$ ${originalValue.toLocaleString()}</td>
+        `;
+        bannedUserList.appendChild(row);
+    });
+}
+
+function updateAdminName(newName) {
+  const admin = aiUsers.find(ai => ai.isAdmin);
+  if (admin) {
+    admin.name = newName;
+    updateAllLeaderboards();
+  }
+}
+
+// Tab Switching
+function switchTab(tabId) {
+  document.querySelectorAll('nav button, .nav-button-container button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  const targetButton = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
+  if (targetButton) {
+      targetButton.classList.add('active');
+  }
+
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  document.getElementById(tabId).classList.add('active');
+
+  if (tabId === 'reports') {
+      reportIndicator.classList.remove('active');
+      reports.forEach(r => r.isUnread = false);
+      renderReports();
+  } else if (tabId === 'ban-land') {
+      renderBanLand();
+  } else if (tabId === 'trades') {
+      renderTradeHistory();
+  } else if (tabId === 'admin-panel') {
+      renderAdminPanel();
+  }
+}
+
+// Leaderboard Switching
+function switchLeaderboard(type) {
+  leaderboardType = type;
+  
+  document.querySelectorAll('.leaderboard-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  document.querySelector(`.leaderboard-tab[onclick="switchLeaderboard('${type}')"]`).classList.add('active');
+  
+  switch(type) {
+    case 'value':
+      leaderboardHeader.textContent = 'Value';
+      break;
+    case 'rap':
+      leaderboardHeader.textContent = 'RAP';
+      break;
+    case 'items':
+      leaderboardHeader.textContent = 'Items';
+      break;
+  }
+  
+  renderLeaderboard(document.getElementById('leaderboard-search-input').value);
+}
+
+// Popup Controls
+function openItemPopup(item = null) {
+  editingItemId = item ? item.id : null;
+  
+  document.getElementById('item-popup-title').textContent = item ? 'Edit Item' : 'Release New Item';
+  document.getElementById('item-popup-submit').textContent = item ? 'Update Item' : 'Release Item';
+
+  // Clear all fields first
+  document.getElementById('item-image').value = '';
+  document.getElementById('item-image-url').value = '';
+  document.getElementById('item-name').value = '';
+  document.getElementById('item-value').value = '';
+  document.getElementById('item-rap').value = '';
+  document.getElementById('stock').value = '';
+  
+  if (item) {
+    // Pre-fill for editing
+    document.getElementById('item-name').value = item.name;
+    document.getElementById('item-value').value = item.value;
+    document.getElementById('item-rap').value = item.rap;
+    document.getElementById('stock').value = item.initialStock;
+  }
+  
+  // Reset image source toggle
+  document.querySelector('input[name="image-source"][value="upload"]').checked = true;
+  toggleImageSource('upload');
+  
+  itemPopup.classList.add('active');
+}
+
+function closeItemPopup() {
+  itemPopup.classList.remove('active');
+  editingItemId = null;
+}
+
+function openAIPopup(ai) {
+  currentViewingAI = ai;
+  const aiProfileName = document.getElementById('ai-profile-name');
+  
+  const idDisplay = ai.isBanned ? ` (Banned ID: ${ai.id})` : ` (ID: ${ai.id})`;
+
+  if (ai.isAdmin && !ai.isBanned) {
+    aiProfileName.innerHTML = `<input type="text" value="${ai.name}" id="admin-name-input" class="form-control" style="display: inline-block; width: auto; font-size: 24px; padding: 5px 10px; height: auto;"> ${idDisplay}`;
+    const adminNameInput = document.getElementById('admin-name-input');
+    adminNameInput.addEventListener('change', (e) => {
+      updateAdminName(e.target.value);
+      // Update title without input box after change
+      document.getElementById('ai-profile-name').textContent = e.target.value;
+      // Refocus to show new name on avatar/stats
+      openAIPopup(aiUsers.find(u => u.isAdmin));
+    });
+  } else {
+    aiProfileName.textContent = ai.name + idDisplay;
+  }
+
+  document.getElementById('ai-avatar').textContent = ai.name.charAt(0).toUpperCase();
+  document.getElementById('ai-avatar').style.backgroundColor = getColorFromName(ai.name);
+  
+  const inventory = ai.isBanned ? ai.bannedInventory : ai.inventory;
+  const value = inventory.reduce((sum, i) => sum + i.item.value, 0);
+  const rap = inventory.reduce((sum, i) => sum + i.item.rap, 0);
+
+  document.getElementById('ai-value').textContent = Math.floor(value).toLocaleString();
+  document.getElementById('ai-rap').textContent = Math.floor(rap).toLocaleString();
+  document.getElementById('ai-items').textContent = inventory.length;
+  
+  const inventoryGrid = document.getElementById('ai-inventory-items');
+  inventoryGrid.innerHTML = '';
+  document.getElementById('ai-inventory-count').textContent = inventory.length;
+
+  // Sort inventory by value (highest to lowest)
+  const sortedInventory = [...inventory].sort((a, b) => b.item.value - a.item.value);
+  
+  sortedInventory.forEach(item => {
+    const itemEl = document.createElement('div');
+    itemEl.className = 'inventory-item';
+
+    let limitedIconHTML = '';
+    if (item.item.initialStock <= 50) {
+        limitedIconHTML = `<div class="inventory-item-limited-icon">💎</div>`;
+    }
+
+    itemEl.innerHTML = `
+      ${limitedIconHTML}
+      <img src="${item.item.image}" alt="${item.item.name}">
+      <div class="inventory-item-name">${item.item.name}</div>
+      <div class="inventory-item-value">Value: R$ ${item.item.value.toLocaleString()}</div>
+      <div class="inventory-item-rap">RAP: R$ ${item.item.rap.toLocaleString()}</div>
+      <div class="inventory-item-serial">#${item.serialNumber}</div>
+    `;
+    inventoryGrid.appendChild(itemEl);
+  });
+
+  // Render Badges
+  const badgeContainer = document.getElementById('ai-badge-container');
+  badgeContainer.innerHTML = '';
+  // Don't show badges for banned players
+  if (!ai.isBanned) {
+      const badges = getAIBadges(ai);
+      badges.forEach(badge => {
+          const badgeEl = document.createElement('div');
+          badgeEl.className = `badge ${badge.type}`;
+          badgeEl.title = badge.name;
+          badgeEl.innerHTML = `${badge.icon} <span>${badge.name}</span>`;
+          badgeContainer.appendChild(badgeEl);
+      });
+  }
+
+  // Add action buttons
+  aiPopupFooter.innerHTML = '';
+  if (ai.isBanned) {
+      aiPopupFooter.innerHTML = `
+        <button class="btn" onclick='unbanAI(${JSON.stringify(ai)}, true)'>Unban & Restore Items</button>
+        <button class="btn btn-secondary" onclick='unbanAI(${JSON.stringify(ai)}, false)'>Unban Only</button>
+      `;
+  } else if (!ai.isAdmin) {
+    const banButton = document.createElement('button');
+    banButton.className = 'btn btn-danger';
+    banButton.textContent = `Ban ${ai.name}`;
+    banButton.onclick = () => {
+      if (confirm(`Are you sure you want to ban ${ai.name}? This is irreversible.`)) {
+        banAI(ai);
+      }
+    };
+    aiPopupFooter.appendChild(banButton);
+  }
+  
+  aiPopup.classList.add('active');
+}
+
+function closeAIPopup() {
+  aiPopup.classList.remove('active');
+  currentViewingAI = null;
+}
+
+function getColorFromName(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = hash % 360;
+  return `hsl(${h}, 70%, 50%)`;
+}
+
+// Item Management
+function handleItemSubmit() {
+  const imageSource = document.querySelector('input[name="image-source"]:checked').value;
+  const fileInput = document.getElementById('item-image');
+  const imageUrlInput = document.getElementById('item-image-url');
+  const nameInput = document.getElementById('item-name');
+  
+  // Collectible fields
+  const valueInput = document.getElementById('item-value');
+  const rapInput = document.getElementById('item-rap');
+  const stockInput = document.getElementById('stock');
+
+  // --- Image Validation ---
+  let imagePromise;
+
+  if (imageSource === 'url') {
+    const url = imageUrlInput.value.trim();
+    if (url) {
+      imagePromise = Promise.resolve(url);
+    } else if (!editingItemId) {
+      alert('Please enter an image URL');
+      return;
+    }
+  } else { // upload
+    if (fileInput.files[0]) {
+      imagePromise = new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = () => reject('Error reading file.');
+        reader.readAsDataURL(fileInput.files[0]);
+      });
+    } else if (!editingItemId) {
+      alert('Please select an image for the item');
+      return;
+    }
+  }
+
+  // --- Other Validations ---
+  if (!nameInput.value.trim()) {
+    alert('Please enter a name for the item');
+    return;
+  }
+
+  const itemData = {
+    name: nameInput.value.trim(),
+  };
+
+  if (!valueInput.value || valueInput.value < 1) {
+    alert('Please enter a valid value (minimum 1 R$)');
+    return;
+  }
+  if (!rapInput.value || rapInput.value < 1) {
+    alert('Please enter a valid RAP (minimum 1 R$)');
+    return;
+  }
+  if (!stockInput.value || stockInput.value < 1) {
+    alert('Please enter a valid stock amount (minimum 1)');
+    return;
+  }
+  itemData.value = parseInt(valueInput.value);
+  itemData.rap = parseInt(rapInput.value);
+  itemData.stock = parseInt(stockInput.value);
+  itemData.initialStock = parseInt(stockInput.value);
+
+
+  const processSubmit = (imageResult) => {
+    if (imageResult) {
+      itemData.image = imageResult;
+    }
+    
+    if (editingItemId) {
+      updateItem(editingItemId, itemData);
+    } else {
+      releaseItem(itemData);
+    }
+  };
+
+  if (imagePromise) {
+    imagePromise.then(processSubmit).catch(error => alert(error));
+  } else {
+    // This case happens when editing an item without changing the image
+    processSubmit(null);
+  }
+}
+
+function releaseItem(itemData) {
+  const newItem = {
+    id: itemIdCounter++,
+    name: itemData.name,
+    image: itemData.image,
+    isCollectible: true,
+    createdAt: new Date(),
+    value: itemData.value,
+    rap: itemData.rap,
+    initialStock: itemData.stock,
+    available: itemData.stock,
+    serialNumbers: Array.from({length: itemData.stock}, (_, i) => i + 1)
+  };
+
+  marketplace.unshift(newItem);
+
+  // Give one copy to the admin account
+  distributeToRoblox(newItem);
+  // Distribute the item to random AIs
+  distributeItem(newItem);
+  
+  updateAllLeaderboards();
+  renderMarketplace();
+  closeItemPopup();
+}
+
+function updateItem(itemId, updates) {
+  const itemIndex = marketplace.findIndex(item => item.id === itemId);
+  if (itemIndex === -1) return;
+
+  const item = marketplace[itemIndex];
+  
+  // --- Standard Update Logic ---
+
+  // Update image if a new one was provided
+  if (updates.image) {
+    item.image = updates.image;
+  }
+
+  // Update basic properties
+  item.name = updates.name;
+  
+  const oldValue = item.value;
+  item.value = updates.value;
+  item.rap = updates.rap;
+
+  if (oldValue !== item.value) {
+      if (!item.stats) { // For items created before this feature
+           item.stats = { tradeCount: 0, overpayEvents: 0, totalOverpayPercent: 0, valueHistory: [{ date: new Date(), value: oldValue }] };
+      }
+      item.stats.valueHistory.push({ date: new Date(), value: item.value });
+  }
+  
+  // Handle stock changes for collectibles
+  const stockDiff = updates.initialStock - item.initialStock;
+  if (stockDiff > 0) {
+    // Increased stock - add new serial numbers
+    const newSerials = Array.from({length: stockDiff}, (_, i) => item.initialStock + 1 + i);
+    item.serialNumbers.push(...newSerials);
+    item.available += stockDiff;
+
+    // Ensure admin has a copy, and determine how many new items to distribute
+    const admin = aiUsers.find(ai => ai.isAdmin);
+    const adminHadItem = admin.inventory.some(invItem => invItem.item.id === item.id);
+    distributeToRoblox(item);
+    const itemsToDistribute = adminHadItem ? stockDiff : Math.max(0, stockDiff - 1);
+
+    // Distribute the new copies
+    if (itemsToDistribute > 0) {
+      distributeItem(item, itemsToDistribute);
+    }
+  } else if (stockDiff < 0) {
+    // Decreased stock - remove from available first
+    const decreaseAmount = Math.min(Math.abs(stockDiff), item.available);
+    item.available -= decreaseAmount;
+    item.serialNumbers.splice(-decreaseAmount, decreaseAmount);
+    
+    // If we still need to decrease more, remove from inventory
+    const remainingDecrease = Math.abs(stockDiff) - decreaseAmount;
+    if (remainingDecrease > 0) {
+      // Find all instances of this item in AI inventories
+      const itemCopies = [];
+      aiUsers.forEach(ai => {
+        ai.inventory.forEach((invItem, index) => {
+          if (invItem.item.id === item.id) {
+            itemCopies.push({ ai, index, serial: invItem.serialNumber });
+          }
+        });
+      });
+      
+      // Sort by serial number (oldest first)
+      itemCopies.sort((a, b) => a.serial - b.serial);
+      
+      // Remove the oldest copies
+      for (let i = 0; i < Math.min(remainingDecrease, itemCopies.length); i++) {
+        const { ai, index } = itemCopies[i];
+        ai.inventory.splice(index, 1);
+      }
+    }
+  }
+  item.initialStock = updates.initialStock;
+  
+  renderMarketplace();
+  updateAllLeaderboards();
+  closeItemPopup();
+}
+
+function distributeToRoblox(item) {
+  const admin = aiUsers.find(ai => ai.isAdmin);
+  if (!admin) return;
+
+  const hasItem = admin.inventory.some(invItem => invItem.item.id === item.id);
+
+  if (!hasItem && item.available > 0) {
+    const serialIndex = item.serialNumbers.length - item.available;
+    const serialNumber = item.serialNumbers[serialIndex];
+    
+    if (serialNumber !== undefined) {
+      admin.inventory.push({
+        item: item,
+        purchaseTime: new Date(),
+        serialNumber: serialNumber
+      });
+      item.available--;
+    }
+  }
+}
+
+function distributeItem(item, quantity = null) {
+  const amountToDistribute = quantity !== null ? quantity : item.available;
+  if (amountToDistribute <= 0) return;
+
+  // Get weighted list of AIs based on current value, not static class
+  const weightedAIs = aiUsers.filter(ai => !ai.isAdmin).map(ai => {
+    const value = calculateAIValue(ai);
+    let weight = 1000 + value; // Base weight + value
+
+    // Heavily skew weights for valuable items to favor richer players
+    if (item.class === 'legendary') {
+        weight = Math.pow(weight, 1.5);
+    } else if (item.class === 'epic') {
+        weight = Math.pow(weight, 1.2);
+    } else if (item.class === 'rare') {
+        weight = weight * 2;
+    }
+    
+    return { ai, weight };
+  });
+
+  // Normalize weights
+  const totalWeight = weightedAIs.reduce((sum, { weight }) => sum + weight, 0);
+  const normalizedAIs = weightedAIs.map(({ ai, weight }) => ({
+    ai,
+    probability: weight / totalWeight
+  }));
+
+  // Distribute items
+  for (let i = 0; i < amountToDistribute; i++) {
+    // Select a random AI based on weights
+    let random = Math.random();
+    let selectedAI = null;
+    let cumulativeProb = 0;
+    
+    for (const { ai, probability } of normalizedAIs) {
+      cumulativeProb += probability;
+      if (random <= cumulativeProb) {
+        selectedAI = ai;
+        break;
+      }
+    }
+
+    if (!selectedAI) {
+      // Fallback to random selection if something went wrong
+      const regularUsers = aiUsers.filter(u => !u.isAdmin);
+      if (regularUsers.length > 0) {
+        selectedAI = regularUsers[Math.floor(Math.random() * regularUsers.length)];
+      }
+    }
+
+    if (!selectedAI) continue; // Skip if no user could be selected
+
+    // Get the next available serial number
+    const serialIndex = item.serialNumbers.length - item.available;
+    const serialNumber = item.serialNumbers[serialIndex];
+
+    // Add to AI's inventory
+    if (serialNumber !== undefined) {
+      selectedAI.inventory.push({
+        item: item,
+        purchaseTime: new Date(),
+        serialNumber: serialNumber
+      });
+      item.available--;
+    }
+  }
+
+  renderMarketplace();
+  updateAllLeaderboards();
+}
+
+// Marketplace Rendering
+function renderMarketplace() {
+  itemList.innerHTML = '';
+  
+  if (marketplace.length === 0) {
+    itemList.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-secondary);">No items available in the marketplace yet.</p>';
+    return;
+  }
+  
+  marketplace.forEach(item => {
+    const itemCard = document.createElement('div');
+    itemCard.className = 'item-card';
+    
+    const stockPercentage = (item.available / item.initialStock) * 100;
+    const distributed = item.initialStock - item.available;
+    
+    itemCard.innerHTML = `
+      <img src="${item.image}" alt="${item.name}" class="item-image">
+      <div class="item-details">
+        <div class="item-name">${item.name}</div>
+        <div class="item-value">Value: R$ ${item.value.toLocaleString()}</div>
+        <div class="item-rap">RAP: R$ ${item.rap.toLocaleString()}</div>
+        <div class="item-stock">
+          Stock: ${item.available}/${item.initialStock}
+          <div class="stock-bar">
+            <div class="stock-fill" style="width: ${stockPercentage}%"></div>
+          </div>
+        </div>
+        <div class="item-owners">Distributed: ${distributed}</div>
+        <div class="item-actions">
+          <button class="btn btn-secondary" onclick="openItemPopup(${JSON.stringify(item).replace(/"/g, '&quot;')})">Edit</button>
+          <button class="btn" onclick="openItemStatsPopup(${item.id})">View</button>
+        </div>
+      </div>
+      <div class="item-status">Collectible</div>
+    `;
+    
+    itemList.appendChild(itemCard);
+  });
+}
+
+// Leaderboard Rendering
+function renderLeaderboard(searchTerm = '') {
+  leaderboardList.innerHTML = '';
+  
+  let userList;
+  switch(leaderboardType) {
+    case 'value': userList = valueLeaderboard; break;
+    case 'rap': userList = rapLeaderboard; break;
+    case 'items': userList = itemsLeaderboard; break;
+    default: userList = [];
+  }
+
+  const filteredUsers = searchTerm
+    ? userList.filter(user => user.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : userList;
+  
+  filteredUsers.slice(0, 5000).forEach((user, index) => {
+    // Find the user's actual rank from the unfiltered list
+    const actualRank = userList.findIndex(u => u.id === user.id) + 1;
+    
+    const row = document.createElement('tr');
+    row.onclick = () => openAIPopup(user);
+    
+    let valueDisplay;
+    switch(leaderboardType) {
+      case 'value':
+        valueDisplay = `R$ ${Math.floor(calculateAIValue(user)).toLocaleString()}`;
+        break;
+      case 'rap':
+        valueDisplay = `R$ ${Math.floor(calculateAIRAP(user)).toLocaleString()}`;
+        break;
+      case 'items':
+        valueDisplay = user.inventory.length;
+        break;
+    }
+    
+    row.innerHTML = `
+      <td class="leaderboard-rank">${actualRank}</td>
+      <td class="leaderboard-name">${user.name}</td>
+      <td class="${leaderboardType === 'value' ? 'leaderboard-value' : leaderboardType === 'rap' ? 'leaderboard-rap' : ''}">${valueDisplay}</td>
+      <td>${user.inventory.length}</td>
+    `;
+    
+    leaderboardList.appendChild(row);
+  });
+}
+
+function calculateAIValue(ai) {
+  let inventoryValue = 0;
+  ai.inventory.forEach(item => {
+    inventoryValue += item.item.value;
+  });
+  return inventoryValue;
+}
+
+function calculateAIRAP(ai) {
+  if (ai.inventory.length === 0) return 0;
+  
+  let totalRAP = 0;
+  ai.inventory.forEach(item => {
+    totalRAP += item.item.rap;
+  });
+  
+  return totalRAP;
+}
+
+// AI Generation
+function generateAIUsers(count) {
+  const adjectives = ["Super", "Cool", "Awesome", "Epic", "Happy", "Shadow", "Robo", "Cyber", "Ninja", "Lazy", "Pro", "Noob", "King", "Queen", "Silent", "Frosty", "Aqua", "Blaze", "Galactic", "Cosmic"];
+  const nouns = ["Gamer", "Builder", "Cat", "Dog", "Panda", "Dragon", "Knight", "Player", "Master", "Dude", "Girl", "Boy", "Warrior", "Legend", "Hunter", "Pilot", "Scout", "Wizard", "Titan", "Spectre"];
+
+  const users = [];
+  const generatedNames = new Set();
+
+  while (users.length < count) {
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    let name;
+
+    const patternType = Math.random();
+    if (patternType < 0.4) { // 40% chance: AdjNoun####
+      name = `${adj}${noun}${Math.floor(Math.random() * 1000) + 1}`;
+    } else if (patternType < 0.7) { // 30% chance: Adj_Noun_##
+      name = `${adj}_${noun}_${Math.floor(Math.random() * 100)}`;
+    } else if (patternType < 0.85) { // 15% chance: Noun####
+        name = `${noun}${Math.floor(Math.random() * 9000) + 1000}`;
+    } else if (patternType < 0.95) { // 10% chance: xX_NounAdj_Xx
+        name = `xX_${noun}${adj}Xx`;
+    } else { // 5% chance
+        name = `${noun}Lover${Math.floor(Math.random() * 300)}`;
+    }
+
+    if (!generatedNames.has(name)) {
+      generatedNames.add(name);
+      users.push({
+        id: users.length + 1,
+        name: name,
+        inventory: [],
+        economicClass: Math.random()
+      });
+    }
+  }
+  
+  return users;
+}
+
+function toggleImageSource(source) {
+    const uploadGroup = document.getElementById('image-upload-group');
+    const urlGroup = document.getElementById('image-url-group');
+    if (source === 'upload') {
+        uploadGroup.style.display = 'block';
+        urlGroup.style.display = 'none';
+    } else { // url
+        uploadGroup.style.display = 'none';
+        urlGroup.style.display = 'block';
+    }
+}
+
+function updateAllLeaderboards() {
+    valueLeaderboard = [...aiUsers].sort((a, b) => calculateAIValue(b) - calculateAIValue(a));
+    rapLeaderboard = [...aiUsers].sort((a, b) => calculateAIRAP(b) - calculateAIRAP(a));
+    itemsLeaderboard = [...aiUsers].sort((a, b) => b.inventory.length - a.inventory.length);
+    renderLeaderboard(document.getElementById('leaderboard-search-input').value);
+}
+
+// --- Start of new/modified code: Report System ---
+
+const REPORT_REASONS = [
+    "Suspicious trading activity (scamming)",
+    "Use of exploits to gain items",
+    "Account Theft (phishing)",
+    "Black market item purchases",
+    "Automated bot-like behavior",
+    "Stolen Items",
+    "High-Value Trade Review"
+];
+
+let currentReportContext = null;
+
+function generateRandomReport() {
+    const regularUsers = aiUsers.filter(u => !u.isAdmin);
+    if (regularUsers.length < 2) return;
+
+    let reason = REPORT_REASONS[Math.floor(Math.random() * REPORT_REASONS.length)];
+
+    // Ensure there's a valuable enough player to be a victim for theft reports
+    const potentialVictims = valueLeaderboard.slice(0, Math.ceil(valueLeaderboard.length * 0.2)).filter(u => u.inventory.length > 0);
+    if (reason === "Stolen Items" && potentialVictims.length === 0) {
+        // Can't generate a theft report, fallback to a different reason
+        reason = "Automated bot-like behavior";
+    }
+
+    let userToReport;
+    let reportContext = null;
+
+    if (reason === "Stolen Items") {
+        const victim = potentialVictims[Math.floor(Math.random() * potentialVictims.length)];
+        const thiefPool = regularUsers.filter(u => u.id !== victim.id);
+        const thief = thiefPool[Math.floor(Math.random() * thiefPool.length)];
+        
+        // Steal the victim's most valuable item
+        const stolenItem = victim.inventory.sort((a,b) => b.item.value - a.item.value)[0];
+        
+        // Remove from victim
+        const victimItemIndex = victim.inventory.findIndex(i => i.item.id === stolenItem.item.id && i.serialNumber === stolenItem.serialNumber);
+        if (victimItemIndex > -1) {
+            victim.inventory.splice(victimItemIndex, 1);
+        }
+
+        // Give to thief
+        thief.inventory.push(stolenItem);
+        userToReport = thief;
+
+        reportContext = {
+            type: 'theft',
+            victim: victim,
+            item: stolenItem
+        };
+
+    } else {
+        userToReport = regularUsers[Math.floor(Math.random() * regularUsers.length)];
+    }
+
+    const newReport = {
+        id: reportIdCounter++,
+        user: userToReport,
+        reason: reason,
+        timestamp: new Date(),
+        isUnread: true,
+        context: reportContext,
+    };
+
+    reports.unshift(newReport);
+    reportIndicator.classList.add('active');
+    
+    // Only render if the tab is active, otherwise the unread status will be cleared
+    if(document.getElementById('reports').classList.contains('active')) {
+      renderReports();
+    }
+}
+
+function renderReports() {
+    reportList.innerHTML = '';
+
+    if (reports.length === 0) {
+        reportList.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--text-secondary);">No active reports.</p>';
+        return;
+    }
+
+    reports.forEach(report => {
+        const reportCard = document.createElement('div');
+        reportCard.className = 'report-card';
+        if (report.isUnread) {
+            reportCard.classList.add('unread');
+        }
+        reportCard.onclick = () => {
+            currentReportContext = report;
+            openAIPopup(report.user);
+            report.isUnread = false;
+            reportCard.classList.remove('unread');
+        };
+
+        const timeString = report.timestamp.toLocaleTimeString();
+        let reasonHtml = `Reason: ${report.reason}`;
+        if (report.context && report.context.type === 'theft') {
+            reasonHtml = `Reason: Stolen Items <br><small>(Stole <strong>${report.context.item.item.name} #${report.context.item.serialNumber}</strong> from ${report.context.victim.name})</small>`;
+        }
+
+
+        reportCard.innerHTML = `
+            <div class="report-header">
+                <span class="report-user">${report.user.name}</span>
+                <span class="report-time">${timeString}</span>
+            </div>
+            <p class="report-reason">${reasonHtml}</p>
+        `;
+        reportList.appendChild(reportCard);
+    });
+}
+
+function startReportTimer() {
+    const generateAndSchedule = () => {
+        generateRandomReport();
+        // Schedule next report in 1-5 minutes
+        const nextReportTime = (Math.random() * 4 * 60 * 1000) + (1 * 60 * 1000);
+        setTimeout(generateAndSchedule, nextReportTime);
+    };
+    generateAndSchedule();
+}
+
+function handleTheftBan(returnItemToVictim) {
+    if (!currentViewingAI || !currentReportContext) return;
+
+    const thief = currentViewingAI;
+    const { victim, item: stolenItem } = currentReportContext.context;
+    
+    // 1. Isolate the stolen item from the thief's inventory
+    const stolenItemIndex = thief.inventory.findIndex(i => i.item.id === stolenItem.item.id && i.serialNumber === stolenItem.serialNumber);
+    if (stolenItemIndex > -1) {
+        thief.inventory.splice(stolenItemIndex, 1);
+    }
+    
+    // 2. Ban the thief (this transfers their remaining items to admin)
+    banAI(thief);
+
+    // 3. Handle the stolen item
+    if (returnItemToVictim) {
+        victim.inventory.push(stolenItem);
+        alert(`Stolen item ${stolenItem.item.name} has been returned to ${victim.name}.`);
+    } else {
+        const admin = aiUsers.find(ai => ai.isAdmin);
+        if (admin) {
+            admin.inventory.push(stolenItem);
+            alert(`Stolen item ${stolenItem.item.name} has been confiscated by ${admin.name}.`);
+        }
+    }
+
+    // 4. Clean up the report
+    const reportIndex = reports.findIndex(r => r.id === currentReportContext.id);
+    if (reportIndex > -1) {
+        reports.splice(reportIndex, 1);
+    }
+    
+    // This will have been called by banAI, but we call again to reflect item return
+    updateAllLeaderboards(); 
+}
+
+// --- End of Report System code ---
+
+// --- Start of Trading System ---
+
+let lastTradeTimestamp = new Date();
+
+function getStockMultiplier(item) {
+    const stock = item.initialStock;
+    if (stock <= 50) return 1.5;
+    if (stock <= 250) return 1.25;
+    if (stock <= 1000) return 1.1;
+    return 1.0;
+}
+
+function attemptRandomTrade() {
+    if (aiUsers.length < 2) return;
+
+    const traderPool = aiUsers.filter(u => !u.isAdmin && u.inventory.length > 0);
+    if (traderPool.length < 2) return;
+
+    // Decide if this is a high-value trade
+    if (Math.random() < 0.15) { // 15% chance for a high-value trade
+        attemptHighValueTrade();
+    } else {
+        attemptCommonTrade();
+    }
+}
+
+function attemptCommonTrade() {
+    const traderPool = aiUsers.filter(u => !u.isAdmin && u.inventory.length > 0);
+    if (traderPool.length < 2) return;
+
+    const traderA = traderPool[Math.floor(Math.random() * traderPool.length)];
+    const traderBPool = traderPool.filter(u => u.id !== traderA.id && u.inventory.length > 0);
+    if (traderBPool.length === 0) return;
+    const traderB = traderBPool[Math.floor(Math.random() * traderBPool.length)];
+
+    negotiateAndExecuteTrade(traderA, traderB);
+}
+
+function attemptHighValueTrade() {
+    // For high value trades, both participants must be wealthy
+    const topTierCutoff = Math.ceil(valueLeaderboard.length * 0.2);
+    const wealthyPool = valueLeaderboard.slice(0, topTierCutoff).filter(u => !u.isAdmin && u.inventory.length > 1);
+
+    if (wealthyPool.length < 2) return; // Not enough wealthy players to trade
+
+    const traderA = wealthyPool[Math.floor(Math.random() * wealthyPool.length)];
+    const traderBPool = wealthyPool.filter(u => u.id !== traderA.id);
+    if(traderBPool.length === 0) return;
+    const traderB = traderBPool[Math.floor(Math.random() * traderBPool.length)];
+
+    negotiateAndExecuteTrade(traderA, traderB);
+}
+
+function negotiateAndExecuteTrade(traderA, traderB, isForced = false) {
+    const selectInitialOffer = (trader) => {
+        const offer = [];
+        const inventory = [...trader.inventory];
+        if (inventory.length === 0) return offer;
+
+        // Offer 1-3 items initially, fewer if they don't have many items.
+        const numItemsToOffer = Math.floor(Math.random() * Math.min(inventory.length, 3)) + 1;
+        
+        // Bias towards trading medium-value items, not their best or worst.
+        inventory.sort((a,b) => b.item.value - a.item.value);
+        const startIndex = Math.floor(inventory.length * 0.2); // Start after top 20%
+        const endIndex = Math.floor(inventory.length * 0.8); // End before bottom 20%
+        
+        let tradableSlice = [];
+        if (startIndex < endIndex) {
+            tradableSlice = inventory.slice(startIndex, endIndex);
+        }
+        
+        // Shuffle the selected slice to get random items from that tier
+        if (tradableSlice.length > 0) {
+            tradableSlice.sort(() => 0.5 - Math.random()); 
+            for (let i = 0; i < Math.min(numItemsToOffer, tradableSlice.length); i++) {
+                offer.push(tradableSlice[i]);
+            }
+        }
+        
+        // If they have very few items or the slice was empty, just offer something random
+        if(offer.length === 0 && inventory.length > 0){
+             inventory.sort(() => 0.5 - Math.random());
+             for (let i = 0; i < Math.min(numItemsToOffer, inventory.length); i++) {
+                offer.push(inventory[i]);
+             }
+        }
+
+        return offer;
+    };
+    
+    const findAddItem = (trader, currentOffer, targetValue) => {
+        const availableItems = trader.inventory.filter(invItem =>
+            !currentOffer.some(offeredItem =>
+                offeredItem.item.id === invItem.item.id && offeredItem.serialNumber === invItem.serialNumber
+            )
+        );
+
+        if (availableItems.length === 0) return null;
+
+        // Find the best item to add - one that is less than the target value but as close as possible
+        availableItems.sort((a, b) => a.item.value - b.item.value);
+
+        let bestItem = null;
+        // Find an item that is smaller than the value difference
+        for(const item of availableItems) {
+            if (item.item.value < targetValue * 1.2) { // Allow slight overshooting
+                bestItem = item;
+            } else {
+                break; // Items are sorted, so no need to check further
+            }
+        }
+        // Fallback: if no single item is small enough, just add the absolute smallest item they have
+        return bestItem || availableItems[0];
+    };
+    
+    const offerA = selectInitialOffer(traderA);
+    const offerB = selectInitialOffer(traderB);
+
+    if (offerA.length === 0 || offerB.length === 0) return false;
+
+    let perceivedValueA = offerA.reduce((sum, i) => sum + (i.item.value * getStockMultiplier(i.item)), 0);
+    let perceivedValueB = offerB.reduce((sum, i) => sum + (i.item.value * getStockMultiplier(i.item)), 0);
+
+    // Iteratively add items to the lower-value side to balance the trade
+    for (let i = 0; i < 5; i++) { // Limit iterations
+        const valueDiff = perceivedValueA - perceivedValueB;
+        if (Math.abs(valueDiff) < Math.max(perceivedValueA, perceivedValueB) * 0.1) break; // Stop if values are within 10%
+
+        if (valueDiff > 0) { // Offer A is more valuable, B needs to add
+            if (offerB.length >= 6) break; // Do not allow more than 6 items on one side
+            const itemToAdd = findAddItem(traderB, offerB, valueDiff);
+            if (itemToAdd) {
+                offerB.push(itemToAdd);
+                perceivedValueB += (itemToAdd.item.value * getStockMultiplier(itemToAdd.item));
+            } else {
+                break;
+            }
+        } else { // Offer B is more valuable, A needs to add
+            if (offerA.length >= 6) break; // Do not allow more than 6 items on one side
+            const itemToAdd = findAddItem(traderA, offerA, -valueDiff);
+            if (itemToAdd) {
+                offerA.push(itemToAdd);
+                perceivedValueA += (itemToAdd.item.value * getStockMultiplier(itemToAdd.item));
+            } else {
+                break;
+            }
+        }
+    }
+
+    if (perceivedValueA === 0 || perceivedValueB === 0) return false;
+    
+    const finalRatio = perceivedValueA / perceivedValueB;
+    if (finalRatio > 2.5 || finalRatio < 0.4) return false; // Reject wildly unbalanced trades
+
+    // Acceptance based on how good the deal is.
+    const calculateAcceptance = (ratio, itemsYouGet, isForced = false) => {
+        let chance = 0;
+        if (ratio > 1.2) chance = 0.8;  // Good overpay -> high chance
+        else if (ratio > 1.0) chance = 0.6;  // Slight overpay -> medium chance
+        else if (ratio > 0.95) chance = 0.4; // Fair trade -> moderate chance
+        else if (ratio > 0.8) chance = 0.15; // Small underpay -> low chance
+        else chance = 0.05; // Bad underpay -> very low chance
+
+        // Demand bonus: more likely to accept trades for high-demand items
+        let demandBonus = 0;
+        for (const invItem of itemsYouGet) {
+            const demand = calculateDemand(invItem.item);
+            if (demand === "Very High") demandBonus += 0.15;
+            else if (demand === "High") demandBonus += 0.10;
+        }
+        chance += demandBonus;
+
+        if (isForced) {
+            chance += 0.5; // Drastically increase chance if forced
+        }
+
+        return Math.min(1.0, chance);
+    };
+
+    const acceptanceA = calculateAcceptance(perceivedValueB / perceivedValueA, offerB, isForced);
+    const acceptanceB = calculateAcceptance(perceivedValueA / perceivedValueB, offerA, isForced);
+
+    if (Math.random() < acceptanceA && Math.random() < acceptanceB) {
+        executeTrade(traderA, traderB, offerA, offerB);
+        return true;
+    }
+    return false;
+}
+
+function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
+    lastTradeTimestamp = new Date(); // Update the timestamp
+    const valueA = itemsFromA.reduce((sum, i) => sum + i.item.value, 0);
+    const valueB = itemsFromB.reduce((sum, i) => sum + i.item.value, 0);
+
+    const allTradedItems = [...itemsFromA, ...itemsFromB];
+    for (const invItem of allTradedItems) {
+         if (!invItem.item.stats) { // Initialize if not present for old data
+             invItem.item.stats = { tradeCount: 0, overpayEvents: 0, totalOverpayPercent: 0, valueHistory: [{ date: new Date(), value: invItem.item.value }] };
+         }
+         invItem.item.stats.tradeCount++;
+    }
+
+    const ratio = valueA / valueB;
+    if (ratio > 1.05) { // trader B got overpay (A paid more)
+        const overpayPercent = ratio - 1;
+        itemsFromB.forEach(invItem => {
+            invItem.item.stats.overpayEvents++;
+            invItem.item.stats.totalOverpayPercent += overpayPercent;
+        });
+    } else if (ratio < 0.95) { // trader A got overpay (B paid more)
+        const overpayPercent = (1/ratio) - 1;
+        itemsFromA.forEach(invItem => {
+            invItem.item.stats.overpayEvents++;
+            invItem.item.stats.totalOverpayPercent += overpayPercent;
+        });
+    }
+    
+    // Remove items from A, add to B
+    for(const item of itemsFromA) {
+        const index = traderA.inventory.findIndex(i => i.item.id === item.item.id && i.serialNumber === item.serialNumber);
+        if(index > -1) {
+            traderA.inventory.splice(index, 1);
+            traderB.inventory.push(item);
+        }
+    }
+
+    // Remove items from B, add to A
+    for(const item of itemsFromB) {
+        const index = traderB.inventory.findIndex(i => i.item.id === item.item.id && i.serialNumber === item.serialNumber);
+        if(index > -1) {
+            traderB.inventory.splice(index, 1);
+            traderA.inventory.push(item);
+        }
+    }
+
+    const trade = { traderA, traderB, itemsFromA, itemsFromB, timestamp: new Date() };
+    tradeHistory.unshift(trade);
+    if (tradeHistory.length > 100) tradeHistory.pop(); // Keep history capped
+
+    // Check for high-value trade alert
+    if (allTradedItems.some(i => i.item.value >= 500000)) {
+        generateTradeAlertReport(trade);
+    }
+    
+    updateAllLeaderboards();
+    if(document.getElementById('trades').classList.contains('active')) {
+      renderTradeHistory();
+    }
+}
+
+function generateTradeAlertReport(trade) {
+    const newReport = {
+        id: reportIdCounter++,
+        user: trade.traderA, // Arbitrarily assign one user to the report card
+        reason: "High-Value Trade Review",
+        timestamp: new Date(),
+        isUnread: true,
+        context: {
+            type: 'trade',
+            trade: trade
+        }
+    };
+    reports.unshift(newReport);
+    reportIndicator.classList.add('active');
+}
+
+function renderTradeHistory() {
+    tradeHistoryList.innerHTML = '';
+    if (tradeHistory.length === 0) {
+        tradeHistoryList.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--text-secondary);">No trades have occurred yet.</p>';
+        return;
+    }
+
+    tradeHistory.forEach(trade => {
+        const tradeCard = document.createElement('div');
+        tradeCard.className = 'trade-card';
+
+        const valueFromA = trade.itemsFromA.reduce((sum, item) => sum + item.item.value, 0);
+        const valueFromB = trade.itemsFromB.reduce((sum, item) => sum + item.item.value, 0);
+
+        const itemsFromA_HTML = trade.itemsFromA.map(i => `<div class="trade-item"><img src="${i.item.image}"> ${i.item.name} (#${i.serialNumber})<span class="leaderboard-value" style="margin-left: auto;">R$ ${i.item.value.toLocaleString()}</span></div>`).join('');
+        const itemsFromB_HTML = trade.itemsFromB.map(i => `<div class="trade-item"><img src="${i.item.image}"> ${i.item.name} (#${i.serialNumber})<span class="leaderboard-value" style="margin-left: auto;">R$ ${i.item.value.toLocaleString()}</span></div>`).join('');
+
+        tradeCard.innerHTML = `
+            <div class="trade-side">
+                <div class="trade-card-header">
+                    <span class="trade-card-user">${trade.traderA.name}</span>
+                </div>
+                <div class="trade-items">${itemsFromA_HTML}</div>
+                <div class="trade-total leaderboard-value">Total: R$ ${valueFromA.toLocaleString()}</div>
+            </div>
+            <div style="font-size: 24px;">&#x21C4;</div>
+            <div class="trade-side">
+                <div class="trade-card-header">
+                     <span class="trade-card-user">${trade.traderB.name}</span>
+                </div>
+                <div class="trade-items">${itemsFromB_HTML}</div>
+                <div class="trade-total leaderboard-value">Total: R$ ${valueFromB.toLocaleString()}</div>
+            </div>
+        `;
+        tradeHistoryList.appendChild(tradeCard);
+    });
+}
+
+function startTradingTimer() {
+    setInterval(() => {
+        // Normal random attempt
+        if (Math.random() < 0.5) { // Don't attempt every interval, just sometimes
+            attemptRandomTrade();
+        }
+
+        // Check if a trade needs to be forced
+        if (new Date() - lastTradeTimestamp > 30000) {
+            console.log("Forcing a trade due to inactivity...");
+            // Try to force a trade to happen by making AI more agreeable
+            for (let i = 0; i < 5; i++) { // Try up to 5 times
+                 const traderPool = aiUsers.filter(u => !u.isAdmin && u.inventory.length > 1);
+                 if (traderPool.length < 2) break;
+                 
+                 const traderA = traderPool[Math.floor(Math.random() * traderPool.length)];
+                 const traderBPool = traderPool.filter(u => u.id !== traderA.id && u.inventory.length > 1);
+                 if (traderBPool.length === 0) continue;
+                 const traderB = traderBPool[Math.floor(Math.random() * traderBPool.length)];
+                 
+                 // The 'true' flag makes the AIs highly likely to accept
+                 const tradeHappened = negotiateAndExecuteTrade(traderA, traderB, true); 
+                 if (tradeHappened) {
+                     console.log("Forced trade successful.");
+                     break; 
+                 }
+            }
+        }
+    }, 4000); // Check every 4 seconds
+}
+
+// --- End of Trading System ---
+
+// --- Admin Panel ---
+function renderAdminPanel() {
+    adminItemSelect.innerHTML = '';
+    // Sort items alphabetically for easier selection
+    const sortedMarketplace = [...marketplace].sort((a,b) => a.name.localeCompare(b.name));
+    
+    sortedMarketplace.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = `${item.name} (${item.isCollectible ? `Value: ${item.value.toLocaleString()}` : `Price: ${item.price.toLocaleString()}`})`;
+        adminItemSelect.appendChild(option);
+    });
+}
+
+function adminGiveItem() {
+    const userIdInput = document.getElementById('admin-user-id');
+    const userId = parseInt(userIdInput.value);
+    const itemId = parseInt(adminItemSelect.value);
+
+    if (isNaN(userId)) {
+        alert("Please enter a valid User ID.");
+        return;
+    }
+    if (isNaN(itemId)) {
+        alert("Please select an item.");
+        return;
+    }
+
+    const targetUser = aiUsers.find(u => u.id === userId) || bannedUsers.find(u => u.id === userId);
+    const itemTemplate = marketplace.find(i => i.id === itemId);
+
+    if (!targetUser) {
+        alert(`User with ID ${userId} not found.`);
+        return;
+    }
+    if (!itemTemplate) {
+        alert("Item template not found. This should not happen.");
+        return;
+    }
+
+    // This is a new, spawned item. It gets a new serial number.
+    const newSerialNumber = itemTemplate.initialStock + 1;
+    itemTemplate.initialStock++;
+    itemTemplate.serialNumbers.push(newSerialNumber);
+    // Note: We don't increment `available` because this is a direct grant, not new stock for distribution.
+
+    const newItem = {
+        item: itemTemplate,
+        purchaseTime: new Date(),
+        serialNumber: newSerialNumber
+    };
+    
+    // For non-collectibles given by admin, we also need to track ownership
+    if (!itemTemplate.isCollectible) {
+        if(!itemTemplate.owners) itemTemplate.owners = 0;
+        itemTemplate.owners++;
+    }
+
+    const inventory = targetUser.isBanned ? targetUser.bannedInventory : targetUser.inventory;
+    inventory.push(newItem);
+
+    userIdInput.value = '';
+    alert(`Successfully gave "${itemTemplate.name}" to ${targetUser.name} (ID: ${targetUser.id}).`);
+    updateAllLeaderboards();
+}
+
+// Initialize
+renderMarketplace();
+updateAllLeaderboards();
+startReportTimer();
+startTradingTimer();
+renderBanLand();
+
+document.getElementById('leaderboard-search-input').addEventListener('input', (e) => {
+    renderLeaderboard(e.target.value);
+});
+
+// --- Settings ---
+function exportData() {
+    try {
+        const dataToSave = {
+            marketplace: marketplace,
+            aiUsers: aiUsers,
+            bannedUsers: bannedUsers,
+            reports: reports,
+            tradeHistory: tradeHistory,
+            itemIdCounter: itemIdCounter,
+            reportIdCounter: reportIdCounter,
+        };
+
+        // Instead of stringifying the whole object, we stringify parts
+        // and create a Blob. This is much more memory-friendly for large datasets.
+        const parts = [
+            '{',
+            `"marketplace": ${JSON.stringify(dataToSave.marketplace)},`,
+            `"aiUsers": ${JSON.stringify(dataToSave.aiUsers)},`,
+            `"bannedUsers": ${JSON.stringify(dataToSave.bannedUsers)},`,
+            `"reports": ${JSON.stringify(dataToSave.reports)},`,
+            `"tradeHistory": ${JSON.stringify(dataToSave.tradeHistory)},`,
+            `"itemIdCounter": ${JSON.stringify(dataToSave.itemIdCounter)},`,
+            `"reportIdCounter": ${JSON.stringify(dataToSave.reportIdCounter)}`,
+            '}'
+        ];
+
+        const blob = new Blob(parts, { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", url);
+        downloadAnchorNode.setAttribute("download", `roblox_sim_data_${new Date().toISOString()}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+
+        // Clean up the object URL
+        URL.revokeObjectURL(url);
+
+        alert("Data has been exported successfully.");
+
+    } catch(error) {
+        alert("An error occurred during export. The dataset might be too large. Error: " + error.message);
+    }
+}
+
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // Yield to the browser to prevent UI freezing on large file loads
+        setTimeout(() => {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                // Basic validation
+                if (!data.aiUsers || !data.marketplace || !data.bannedUsers) {
+                    throw new Error("Invalid data file. Missing critical information.");
+                }
+
+                // Load data
+                // Clear existing state first
+                marketplace.length = 0;
+                aiUsers.length = 0;
+                bannedUsers.length = 0;
+                reports.length = 0;
+                tradeHistory.length = 0;
+
+                // Push new state
+                marketplace.push(...data.marketplace);
+                aiUsers.push(...data.aiUsers);
+                
+                // Rehydrate date strings from the imported file back into Date objects
+                if (data.bannedUsers) {
+                    data.bannedUsers.forEach(user => user.banDate = new Date(user.banDate));
+                    bannedUsers.push(...data.bannedUsers);
+                }
+                if (data.reports) {
+                    data.reports.forEach(report => report.timestamp = new Date(report.timestamp));
+                    reports.push(...data.reports);
+                }
+                if (data.tradeHistory) {
+                    data.tradeHistory.forEach(trade => trade.timestamp = new Date(trade.timestamp));
+                    tradeHistory.push(...data.tradeHistory);
+                }
+
+                itemIdCounter = data.itemIdCounter || itemIdCounter;
+                reportIdCounter = data.reportIdCounter || reportIdCounter;
+                
+                // Re-render everything
+                updateAllLeaderboards();
+                renderMarketplace();
+                renderReports();
+                renderBanLand();
+                renderTradeHistory();
+                renderAdminPanel();
+
+                // Switch to a default tab
+                switchTab('marketplace');
+                
+                alert("Data imported successfully!");
+
+            } catch (error) {
+                alert("Failed to import data. File may be corrupt or invalid. Error: " + error.message);
+            } finally {
+                // Reset file input so the same file can be loaded again
+                event.target.value = '';
+            }
+        }, 100);
+    };
+    reader.readAsText(file);
+}
+
+function goCollectible(itemId, value, rap) {
+    const itemIndex = marketplace.findIndex(item => item.id === itemId);
+    if (itemIndex === -1) return;
+    const item = marketplace[itemIndex];
+
+    if (!item || item.isCollectible) return;
+
+    // --- This is the "going limited" event ---
+    item.isCollectible = true;
+    // Base value on price, with a small bonus for hype
+    item.value = value || Math.ceil(item.price * (1.2 + Math.random() * 0.3)); 
+    item.rap = rap || Math.ceil(item.price * (1.1 + Math.random() * 0.2)); 
+    
+    const owners = [];
+    
+    const findOwnersIn = (userList) => {
+        userList.forEach(user => {
+            const inventory = user.isBanned ? user.bannedInventory : user.inventory;
+            if(!inventory) return;
+
+            inventory.forEach((invItem, index) => {
+                if (invItem.item.id === itemId && !invItem.serialNumber) {
+                    owners.push({ai: user, purchaseIndex: index});
+                }
+            });
+        });
+    }
+
+    findOwnersIn(aiUsers);
+    findOwnersIn(bannedUsers);
+      
+    item.initialStock = owners.length;
+    item.available = 0; // All copies are now owned
+    item.serialNumbers = Array.from({length: owners.length}, (_, i) => i + 1);
+    
+    // Convert purchases to official owned items with serials
+    owners.forEach(({ai, purchaseIndex}, serialIndex) => {
+        const inventory = ai.isBanned ? ai.bannedInventory : ai.inventory;
+        if(inventory[purchaseIndex]) {
+            inventory[purchaseIndex].serialNumber = serialIndex + 1;
+        }
+    });
+
+    // Clean up old properties
+    delete item.price;
+    delete item.owners;
+    delete item.offSaleDate;
+      
+    alert(`${item.name} has gone collectible! ${owners.length} owners now have a limited version.`);
+    
+    updateAllLeaderboards();
+    renderMarketplace();
+}
+
+// --- Item Stats ---
+function openItemStatsPopup(itemId) {
+    const item = marketplace.find(i => i.id === itemId);
+    if (!item) return;
+    
+    if (!item.stats) {
+        item.stats = { tradeCount: 0, overpayEvents: 0, totalOverpayPercent: 0, valueHistory: [{ date: new Date(), value: item.value }] };
+    }
+
+    document.getElementById('item-stats-title').textContent = `${item.name} - Stats`;
+    document.getElementById('item-stats-img-src').src = item.image;
+    document.getElementById('item-stats-img-src').alt = item.name;
+
+    document.getElementById('item-stats-demand').textContent = calculateDemand(item);
+    const avgOp = item.stats.overpayEvents > 0 ? (item.stats.totalOverpayPercent / item.stats.overpayEvents) * 100 : 0;
+    document.getElementById('item-stats-op').textContent = `${avgOp.toFixed(1)}%`;
+    document.getElementById('item-stats-trades').textContent = item.stats.tradeCount;
+
+    renderValueChart(item);
+    itemStatsPopup.classList.add('active');
+}
+
+function closeItemStatsPopup() {
+    itemStatsPopup.classList.remove('active');
+    if (valueChartInstance) {
+        valueChartInstance.destroy();
+    }
+}
+
+function calculateDemand(item) {
+    const allTradeCounts = marketplace.filter(i => i.stats && i.isCollectible).map(i => i.stats.tradeCount);
+    if (allTradeCounts.length < 5) return "N/A";
+
+    allTradeCounts.sort((a,b) => a - b);
+    const percentile80 = allTradeCounts[Math.floor(allTradeCounts.length * 0.8)];
+    const percentile60 = allTradeCounts[Math.floor(allTradeCounts.length * 0.6)];
+    const percentile40 = allTradeCounts[Math.floor(allTradeCounts.length * 0.4)];
+    const percentile20 = allTradeCounts[Math.floor(allTradeCounts.length * 0.2)];
+
+    if (item.stats.tradeCount === 0) return "Very Low";
+    if (item.stats.tradeCount > percentile80) return "Very High";
+    if (item.stats.tradeCount > percentile60) return "High";
+    if (item.stats.tradeCount > percentile40) return "Medium";
+    if (item.stats.tradeCount > percentile20) return "Low";
+    return "Very Low";
+}
+
+function renderValueChart(item) {
+    const ctx = document.getElementById('value-history-chart').getContext('2d');
+    
+    if (valueChartInstance) {
+        valueChartInstance.destroy();
+    }
+
+    const history = item.stats.valueHistory.sort((a,b) => new Date(a.date) - new Date(b.date));
+    const labels = history.map(entry => new Date(entry.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+    const data = history.map(entry => entry.value);
+
+    valueChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Item Value (R$)',
+                data: data,
+                borderColor: 'white',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                fill: true,
+                tension: 0.1,
+                pointRadius: 4,
+                pointBackgroundColor: 'white'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    callbacks: {
+                        label: function(context) {
+                            return `Value: R$ ${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: { color: 'white' },
+                     grid: { color: 'rgba(255, 255, 255, 0.2)' }
+                },
+                x: {
+                    ticks: { color: 'white' },
+                     grid: { display: false }
+                }
+            }
+        }
+    });
+}
+  </script>
+</body>
+</html>
