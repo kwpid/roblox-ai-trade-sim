@@ -584,9 +584,12 @@
       <div id="item-stats-content" style="display: flex; gap: 30px; margin-top: 20px; flex-wrap: wrap;">
           <div id="item-stats-details" style="flex: 1; min-width: 200px;">
               <h4>Details</h4>
+              <p><strong>Initial Price:</strong> <span id="item-stats-initial-price" style="font-weight: bold;">N/A</span></p>
               <p><strong>Demand:</strong> <span id="item-stats-demand" style="color: var(--primary-blue); font-weight: bold;">N/A</span></p>
               <p><strong>Average Overpay:</strong> <span id="item-stats-op" style="color: var(--value-green); font-weight: bold;">N/A</span></p>
               <p><strong>Times Traded:</strong> <span id="item-stats-trades" style="font-weight: bold;">0</span></p>
+              <p><strong>Unique Owners:</strong> <span id="item-stats-owners" style="font-weight: bold;">0</span></p>
+              <p><strong>Terminated Copies:</strong> <span id="item-stats-terminated" style="font-weight: bold;">0</span></p>
           </div>
           <div id="item-stats-image" style="flex: 0 0 150px;">
               <img id="item-stats-img-src" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color);">
@@ -1112,7 +1115,7 @@ function releaseItem(itemData) {
     image: itemData.image,
     isCollectible: true,
     createdAt: new Date(),
-    value: itemData.value,
+    value: Math.round(itemData.value * 0.75), // Start value at 75% of initial price
     initialPrice: itemData.value, // Store the initial price
     rap: 0, // Set RAP to 0 or remove
     initialStock: itemData.stock,
@@ -1168,16 +1171,12 @@ function updateItem(itemId, updates) {
     item.serialNumbers.push(...newSerials);
     item.available += stockDiff;
 
-    // Ensure admin has a copy, and determine how many new items to distribute
-    const admin = aiUsers.find(ai => ai.isAdmin);
-    const adminHadItem = admin.inventory.some(invItem => invItem.item.id === item.id);
+    // Ensure admin has a copy if they don't for some reason (e.g. data import)
     distributeToRoblox(item);
-    const itemsToDistribute = adminHadItem ? stockDiff : Math.max(0, stockDiff - 1);
 
-    // Distribute the new copies
-    if (itemsToDistribute > 0) {
-      distributeItem(item, itemsToDistribute);
-    }
+    // Distribute all the new copies
+    distributeItem(item, stockDiff);
+    
   } else if (stockDiff < 0) {
     // Decreased stock - remove from available first
     const decreaseAmount = Math.min(Math.abs(stockDiff), item.available);
@@ -1220,18 +1219,14 @@ function distributeToRoblox(item) {
 
   const hasItem = admin.inventory.some(invItem => invItem.item.id === item.id);
 
-  if (!hasItem && item.available > 0) {
-    const serialIndex = item.serialNumbers.length - item.available;
-    const serialNumber = item.serialNumbers[serialIndex];
-    
-    if (serialNumber !== undefined) {
-      admin.inventory.push({
-        item: item,
-        purchaseTime: new Date(),
-        serialNumber: serialNumber
-      });
-      item.available--;
-    }
+  if (!hasItem) {
+    admin.inventory.push({
+      item: item,
+      purchaseTime: new Date(),
+      serialNumber: 0 // Special serial for admin
+    });
+    // This copy is "off the books" from the public stock.
+    // Do not modify item.available or the serialNumbers array.
   }
 }
 
@@ -1786,8 +1781,32 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
 
     if (initiatorOffer.length === 0) return false;
 
+    // --- Sanity Check on Raw Value ---
+    const rawInitiatorValue = initiatorOffer.reduce((s, i) => s + i.item.value, 0);
+    const rawPartnerValue = partnerOffer.reduce((s, i) => s + i.item.value, 0);
+    
+    // Prevent division by zero if partner offers nothing of value
+    if (rawPartnerValue <= 0) return false;
+
+    const totalTradeValue = rawInitiatorValue + rawPartnerValue;
+    const exchangeRatio = rawInitiatorValue / rawPartnerValue;
+
+    // For low-to-mid value trades, prevent extreme offers.
+    if (totalTradeValue < 1_000_000) {
+        // Auto-decline if one side is offering more than 50% overpay, or receiving less than 80% of the value they're giving up.
+        if (exchangeRatio > 1.5 || exchangeRatio < 0.8) {
+            return false;
+        }
+    }
+    // For high-value trades, allow more flexibility but still prevent absurd trades.
+    else {
+        if (exchangeRatio > 2.0 || exchangeRatio < 0.7) { // e.g. 2M for 1M is a potential deal, but 2.1M for 1M is not.
+            return false;
+        }
+    }
+
     // --- Phase 3: Final Evaluation & Balancing ---
-    // This is a simplified final check. A real negotiation would be a loop.
+    // This check uses perceived value for the final AI decision
     const finalRatio = initiatorValue / partnerValue;
     
     let acceptanceChance = 0;
@@ -1874,6 +1893,7 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
     if(document.getElementById('trades').classList.contains('active')) {
       renderTradeHistory();
     }
+    renderMarketplace();
 }
 
 function generateTradeAlertReport(trade) {
@@ -2204,10 +2224,28 @@ function openItemStatsPopup(itemId) {
     document.getElementById('item-stats-img-src').src = item.image;
     document.getElementById('item-stats-img-src').alt = item.name;
 
+    document.getElementById('item-stats-initial-price').textContent = `R$ ${item.initialPrice.toLocaleString()}`;
     document.getElementById('item-stats-demand').textContent = calculateDemand(item);
     const avgOp = item.stats.tradeCount > 0 ? (item.stats.netPayRatioSum / item.stats.tradeCount) * 100 : 0;
     document.getElementById('item-stats-op').textContent = `${avgOp.toFixed(1)}%`;
     document.getElementById('item-stats-trades').textContent = item.stats.tradeCount;
+
+    // Calculate Unique Owners
+    const uniqueOwners = new Set();
+    aiUsers.forEach(ai => {
+        if (ai.inventory.some(invItem => invItem.item.id === itemId)) {
+            uniqueOwners.add(ai.id);
+        }
+    });
+    document.getElementById('item-stats-owners').textContent = uniqueOwners.size.toLocaleString();
+
+    // Calculate Terminated Copies (owned by admin, excluding serial #0)
+    const admin = aiUsers.find(ai => ai.isAdmin);
+    let terminatedCount = 0;
+    if (admin) {
+        terminatedCount = admin.inventory.filter(invItem => invItem.item.id === itemId && invItem.serialNumber !== 0).length;
+    }
+    document.getElementById('item-stats-terminated').textContent = terminatedCount.toLocaleString();
 
     renderValueChart(item);
     itemStatsPopup.classList.add('active');
