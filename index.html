@@ -1157,6 +1157,7 @@ function updateItem(itemId, updates) {
       if (!item.stats) { // For items created before this feature
            item.stats = { tradeCount: 0, netPayRatioSum: 0, valueHistory: [{ date: new Date(), value: oldValue }] };
       }
+      if(!item.createdAt) item.createdAt = new Date(); // Backfill for old items
       item.stats.valueHistory.push({ date: new Date(), value: item.value });
   }
   
@@ -1761,50 +1762,51 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
         );
     }
     
-    // If not curious or no suitable new item was found, fall back to upgrade logic
     if (!targetItem) {
         partnerInventory.sort((a,b) => b.item.value - a.item.value);
-        const initiatorBestItemValue = initiator.inventory.reduce((max, i) => Math.max(max, i.item.value), 0);
-        targetItem = partnerInventory.find(item => item.item.value > initiatorBestItemValue * 1.1);
+        const initiatorBestItemValue = initiator.inventory.reduce((max, i) => Math.max(max, getPerceivedValue(i.item)), 0);
+        targetItem = partnerInventory.find(item => getPerceivedValue(item.item) > initiatorBestItemValue * 1.1);
     }
 
-    if (!targetItem) {
-        return false; // Initiator sees nothing they want.
-    }
+    if (!targetItem) return false;
     
-    // --- Phase 2: Initiator Builds an Offer & Requests Adds ---
+    // --- Phase 2: Building the Deal ---
     let initiatorOffer = [];
-    let partnerOffer = [targetItem]; // Partner's side starts with the target item
+    let partnerOffer = [targetItem];
     
     const initiatorTradableItems = initiator.inventory
         .filter(i => i.item.id !== targetItem.item.id)
-        .sort((a,b) => a.item.value - b.item.value); // Sort low to high
+        .sort((a,b) => getPerceivedValue(a.item) - getPerceivedValue(b.item)); // Sort low to high perceived value
 
-    // Try to build a package to meet the target value
     let initiatorValue = 0;
+    let partnerValue = getPerceivedValue(targetItem.item);
+
+    // Initiator builds an offer to match the partner's perceived value
     for (const item of initiatorTradableItems) {
-        if (initiatorOffer.length >= 5) break; // Max 5 items
-        if (initiatorValue >= partnerOffer.reduce((sum, i) => sum + i.item.value, 0) * 1.1) break;
+        if (initiatorOffer.length >= 5) break;
+        if (initiatorValue >= partnerValue) break;
         
+        // Add items until the offer is sufficient
         initiatorOffer.push(item);
-        initiatorValue += item.item.value;
+        initiatorValue += getPerceivedValue(item.item);
     }
 
-    // --- Phase 3: Balancing the Trade ---
-    let partnerValue = partnerOffer.reduce((sum, i) => sum + i.item.value, 0);
+    // --- Phase 3: Balancing the Trade (Counter-Offer) ---
     const valueDifference = initiatorValue - partnerValue;
     
-    // If initiator is overpaying, ask for adds from the partner
-    if (valueDifference > partnerValue * 0.1) { // If overpaying by more than 10%
+    // If initiator is overpaying significantly, they request an "add" from the partner
+    if (valueDifference > partnerValue * 0.2 && initiatorOffer.length < 5) { // OP by >20%
         const partnerAddables = partner.inventory
             .filter(i => !partnerOffer.some(o => o.serialNumber === i.serialNumber))
-            .sort((a,b) => a.item.value - b.item.value);
+            .sort((a,b) => getPerceivedValue(a.item) - getPerceivedValue(b.item));
             
         for (const addItem of partnerAddables) {
-            if (partnerOffer.length >= 5) break; // Max 5 items
-            if (addItem.item.value < (initiatorValue - partnerValue)) {
+            if (partnerOffer.length >= 5) break;
+            const addItemValue = getPerceivedValue(addItem.item);
+            // Find an add that helps balance the trade without flipping the overpay
+            if (addItemValue < valueDifference * 0.8) {
                 partnerOffer.push(addItem);
-                partnerValue += addItem.item.value;
+                partnerValue += addItemValue;
             }
         }
     }
@@ -1812,24 +1814,22 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
     if (initiatorOffer.length === 0) return false;
 
     // --- Phase 4: Final Evaluation ---
-    const finalInitiatorValue = initiatorOffer.reduce((s, i) => s + i.item.value, 0);
-    const finalPartnerValue = partnerOffer.reduce((s, i) => s + i.item.value, 0);
+    const finalInitiatorValue = initiatorOffer.reduce((s, i) => s + getPerceivedValue(i.item), 0);
+    const finalPartnerValue = partnerOffer.reduce((s, i) => s + getPerceivedValue(i.item), 0);
     
     if (finalInitiatorValue === 0 || finalPartnerValue === 0) return false;
 
     const finalRatio = finalInitiatorValue / finalPartnerValue;
     
-    // Partner decides whether to accept the final deal
+    // Both sides must find the final deal acceptable based on perceived value
     let acceptanceChance = 0;
-    if (finalRatio < 0.9) acceptanceChance = 0.05; // Partner would be overpaying
-    else if (finalRatio < 1.1) acceptanceChance = 0.5; // Fair trade
-    else if (finalRatio < 1.3) acceptanceChance = 0.8; // Good deal for partner
-    else acceptanceChance = 0.95; // Great deal for partner
+    if (finalRatio < 0.95) acceptanceChance = 0.1;  // Unlikely to accept underpay
+    else if (finalRatio < 1.2) acceptanceChance = 0.8; // Very likely to accept fair/slight OP
+    else acceptanceChance = 0.4; // Less likely to accept a huge OP (feels scammy/too good to be true)
 
     if (isForced) acceptanceChance = 1.0;
     
     if (Math.random() < acceptanceChance) {
-        // Trade accepted!
         executeTrade(initiator, partner, initiatorOffer, partnerOffer);
         return true;
     }
@@ -2403,6 +2403,61 @@ function renderAICharts(ai) {
       }
     }
   });
+}
+
+function calculateItemTrend(item) {
+    if (!item.stats || !item.stats.valueHistory || item.stats.valueHistory.length < 3) {
+        return 1.0; // Neutral trend if not enough data
+    }
+    const recentHistory = item.stats.valueHistory.slice(-3);
+    const oldest = recentHistory[0].value;
+    const newest = recentHistory[recentHistory.length - 1].value;
+
+    if (oldest === 0) return 1.0;
+
+    const trend = newest / oldest;
+
+    if (trend > 1.1) return 1.15; // Strong upward trend
+    if (trend > 1.0) return 1.05; // Slight upward trend
+    if (trend < 0.9) return 0.9;  // Strong downward trend
+    if (trend < 1.0) return 0.95; // Slight downward trend
+    return 1.0; // Stable
+}
+
+function getPerceivedValue(item) {
+    if (!item) return 0;
+    let perceivedValue = item.value;
+
+    // 1. Stock Multiplier
+    const stock = item.initialStock;
+    if (stock <= 10) perceivedValue *= 1.4;       // Extremely rare
+    else if (stock <= 50) perceivedValue *= 1.25;  // Very rare
+    else if (stock <= 250) perceivedValue *= 1.1;   // Rare
+    
+    // 2. Demand Multiplier
+    const demand = calculateDemand(item);
+    if (demand === "Very High") perceivedValue *= 1.2;
+    else if (demand === "High") perceivedValue *= 1.1;
+    else if (demand === "Low") perceivedValue *= 0.9;
+    else if (demand === "Very Low") perceivedValue *= 0.8;
+
+    // 3. Trend Multiplier
+    perceivedValue *= calculateItemTrend(item);
+
+    // 4. Trophy Item Multiplier
+    if (item.value > 25000) {
+        perceivedValue *= 1.15; // Extra desire for high-tier items
+    }
+
+    // 5. Novelty Multiplier (for newer items)
+    if(item.createdAt) {
+      const ageInDays = (new Date() - new Date(item.createdAt)) / (1000 * 60 * 60 * 24);
+      if (ageInDays < 7) { // Less than a week old
+          perceivedValue *= 1.1;
+      }
+    }
+
+    return Math.floor(perceivedValue);
 }
   </script>
 </body>
