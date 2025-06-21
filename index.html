@@ -1765,7 +1765,6 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
     if (!targetItem) {
         partnerInventory.sort((a,b) => b.item.value - a.item.value);
         const initiatorBestItemValue = initiator.inventory.reduce((max, i) => Math.max(max, i.item.value), 0);
-        // Find an item in the partner's inventory that is a significant upgrade
         targetItem = partnerInventory.find(item => item.item.value > initiatorBestItemValue * 1.1);
     }
 
@@ -1773,71 +1772,65 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
         return false; // Initiator sees nothing they want.
     }
     
-    // --- Phase 2: Initiator Builds an Offer ---
-    let offerValue = 0;
-    const offer = [];
-    const initiatorTradableItems = [...initiator.inventory].sort((a,b) => a.item.value - b.item.value); // Sort low to high
+    // --- Phase 2: Initiator Builds an Offer & Requests Adds ---
+    let initiatorOffer = [];
+    let partnerOffer = [targetItem]; // Partner's side starts with the target item
+    
+    const initiatorTradableItems = initiator.inventory
+        .filter(i => i.item.id !== targetItem.item.id)
+        .sort((a,b) => a.item.value - b.item.value); // Sort low to high
 
-    // AI tries to build a package to meet the target value, with a slight overpay to entice
-    const targetValueWithOverpay = targetItem.item.value * (1.05 + Math.random() * 0.1); // 5-15% overpay target
-
-    // First, try to bundle smaller items that aren't a gross overpay on their own
+    // Try to build a package to meet the target value
+    let initiatorValue = 0;
     for (const item of initiatorTradableItems) {
-        if (offerValue >= targetValueWithOverpay) break;
-        if (item.item.id === targetItem.item.id) continue;
+        if (initiatorOffer.length >= 5) break; // Max 5 items
+        if (initiatorValue >= partnerOffer.reduce((sum, i) => sum + i.item.value, 0) * 1.1) break;
         
-        // Only add items that are reasonably close to the target's value
-        if (item.item.value < targetItem.item.value * 2.0) {
-             offer.push(item);
-             offerValue += item.item.value * getStockMultiplier(item.item);
-        }
+        initiatorOffer.push(item);
+        initiatorValue += item.item.value;
     }
 
-    // If the offer is still not enough, consider adding ONE larger item (a downgrade)
-    if (offerValue < targetValueWithOverpay) {
-        // Find the smallest "big" item that will seal the deal
-        const potentialDowngrades = initiatorTradableItems.filter(
-            i => !offer.some(o => o.serialNumber === i.serialNumber) && // not already in the offer
-                 i.item.id !== targetItem.item.id &&
-                 (i.item.value + offerValue) > targetValueWithOverpay // it must be enough
-        );
-        
-        if (potentialDowngrades.length > 0) {
-            const bestDowngrade = potentialDowngrades[0]; // Smallest of the big items
+    // --- Phase 3: Balancing the Trade ---
+    let partnerValue = partnerOffer.reduce((sum, i) => sum + i.item.value, 0);
+    const valueDifference = initiatorValue - partnerValue;
+    
+    // If initiator is overpaying, ask for adds from the partner
+    if (valueDifference > partnerValue * 0.1) { // If overpaying by more than 10%
+        const partnerAddables = partner.inventory
+            .filter(i => !partnerOffer.some(o => o.serialNumber === i.serialNumber))
+            .sort((a,b) => a.item.value - b.item.value);
             
-            // SANITY CHECK: Don't make a terrible trade.
-            // Is this single item worth more than 3x the target? If so, not worth it.
-            const isGrossOverpay = bestDowngrade.item.value > targetItem.item.value * 3;
-
-            if (!isGrossOverpay) {
-                offer.push(bestDowngrade);
-                offerValue += bestDowngrade.item.value * getStockMultiplier(bestDowngrade.item);
+        for (const addItem of partnerAddables) {
+            if (partnerOffer.length >= 5) break; // Max 5 items
+            if (addItem.item.value < (initiatorValue - partnerValue)) {
+                partnerOffer.push(addItem);
+                partnerValue += addItem.item.value;
             }
         }
     }
 
-    if (offerValue < targetItem.item.value * 0.9) {
-        return false; // Couldn't build a compelling enough offer
-    }
+    if (initiatorOffer.length === 0) return false;
 
-    // --- Phase 3: Partner Evaluates and Accepts/Rejects ---
-    const partnerSeesOfferValue = offerValue;
-    const partnerGivesUpValue = targetItem.item.value * getStockMultiplier(targetItem.item);
+    // --- Phase 4: Final Evaluation ---
+    const finalInitiatorValue = initiatorOffer.reduce((s, i) => s + i.item.value, 0);
+    const finalPartnerValue = partnerOffer.reduce((s, i) => s + i.item.value, 0);
+    
+    if (finalInitiatorValue === 0 || finalPartnerValue === 0) return false;
 
-    // Partner is more likely to accept if they are getting significant overpay
-    const perceivedRatio = partnerSeesOfferValue / partnerGivesUpValue;
+    const finalRatio = finalInitiatorValue / finalPartnerValue;
+    
+    // Partner decides whether to accept the final deal
     let acceptanceChance = 0;
-
-    if (perceivedRatio > 1.25) acceptanceChance = 0.9;  // Great deal
-    else if (perceivedRatio > 1.1) acceptanceChance = 0.7; // Good deal
-    else if (perceivedRatio > 1.0) acceptanceChance = 0.4;  // Fair deal
-    else acceptanceChance = 0.1; // Bad deal
+    if (finalRatio < 0.9) acceptanceChance = 0.05; // Partner would be overpaying
+    else if (finalRatio < 1.1) acceptanceChance = 0.5; // Fair trade
+    else if (finalRatio < 1.3) acceptanceChance = 0.8; // Good deal for partner
+    else acceptanceChance = 0.95; // Great deal for partner
 
     if (isForced) acceptanceChance = 1.0;
     
     if (Math.random() < acceptanceChance) {
         // Trade accepted!
-        executeTrade(initiator, partner, offer, [targetItem]);
+        executeTrade(initiator, partner, initiatorOffer, partnerOffer);
         return true;
     }
 
