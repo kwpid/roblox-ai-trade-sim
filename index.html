@@ -385,6 +385,117 @@
     .serial-ownership-action { font-size: 14px; color: var(--accent-blue); font-weight: bold; }
     .serial-current-owner { background-color: var(--success-green); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
     .serial-not-found { text-align: center; padding: 40px; color: var(--gray-light); font-style: italic; }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 25px;
+      padding: 20px 0;
+    }
+    
+    .pagination button {
+      background-color: var(--background-card);
+      border: 1px solid var(--border-color);
+      color: var(--primary-text);
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    
+    .pagination button:hover {
+      background-color: var(--gray-dark);
+      border-color: var(--accent-blue);
+    }
+    
+    .pagination button.active {
+      background-color: var(--accent-blue);
+      color: white;
+      border-color: var(--accent-blue);
+    }
+    
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .pagination-info {
+      color: var(--gray-light);
+      font-size: 14px;
+      margin: 0 15px;
+    }
+
+    /* Inventory Item Stacking */
+    .inventory-item-stack {
+      background-color: var(--gray-dark);
+      border-radius: var(--radius);
+      padding: 15px;
+      text-align: center;
+      transition: transform 0.2s;
+      border: 1px solid var(--gray-mid);
+      position: relative;
+    }
+    
+    .inventory-item-stack:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent-blue);
+    }
+    
+    .inventory-item-stack img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      border: 1px solid var(--gray-mid);
+    }
+    
+    .inventory-item-stack-limited-icon {
+      position: absolute;
+      top: 90px;
+      left: 20px;
+      font-size: 24px;
+      text-shadow: 0 0 5px rgba(0,0,0,0.8);
+      pointer-events: none;
+    }
+    
+    .inventory-item-stack-name {
+      font-size: 16px;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 5px;
+    }
+    
+    .inventory-item-stack-value {
+      font-size: 14px;
+      color: var(--success-green);
+      margin-bottom: 5px;
+    }
+    
+    .inventory-item-stack-count {
+      font-size: 12px;
+      color: var(--accent-blue);
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .inventory-item-stack-serials {
+      font-size: 11px;
+      color: var(--gray-light);
+      line-height: 1.3;
+      max-height: 40px;
+      overflow-y: auto;
+      background-color: var(--gray-darker);
+      padding: 5px;
+      border-radius: 4px;
+      border: 1px solid var(--gray-mid);
+    }
   </style>
 </head>
 <body>
@@ -696,6 +807,14 @@ let activityIdCounter = 1;
 // Serial tracking state
 const serialOwnershipHistory = new Map(); // Map of "itemId-serialNumber" to ownership history
 
+// Pagination state
+const ITEMS_PER_PAGE = 20;
+let marketplacePage = 1;
+let reportsPage = 1;
+let banLandPage = 1;
+let tradesPage = 1;
+let activityPage = 1;
+
 // DOM Elements
 const marketplaceTab = document.getElementById('marketplace');
 const leaderboardTab = document.getElementById('leaderboard');
@@ -881,7 +1000,13 @@ function renderBanLand() {
         return;
     }
     
-    bannedUsers.forEach(user => {
+    // Calculate pagination
+    const totalPages = Math.ceil(bannedUsers.length / ITEMS_PER_PAGE);
+    const startIndex = (banLandPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const usersToShow = bannedUsers.slice(startIndex, endIndex);
+    
+    usersToShow.forEach(user => {
         const row = document.createElement('tr');
         row.onclick = () => openAIPopup(user);
 
@@ -894,6 +1019,12 @@ function renderBanLand() {
             <td class="leaderboard-value">R$ ${originalValue.toLocaleString()}</td>
         `;
         bannedUserList.appendChild(row);
+    });
+    
+    // Add pagination
+    renderPagination('ban-land', totalPages, banLandPage, (page) => {
+        banLandPage = page;
+        renderBanLand();
     });
 }
 
@@ -921,6 +1052,9 @@ function switchTab(tabId) {
   });
   document.getElementById(tabId).classList.add('active');
 
+  // Reset pagination for the tab being switched to
+  resetPaginationForTab(tabId);
+
   if (tabId === 'reports') {
       reportIndicator.classList.remove('active');
       reports.forEach(r => r.isUnread = false);
@@ -935,6 +1069,27 @@ function switchTab(tabId) {
       renderAdminPanel();
   } else if (tabId === 'serial-tracker') {
       renderSerialTracker();
+  }
+}
+
+// Reset pagination for a specific tab
+function resetPaginationForTab(tabId) {
+  switch(tabId) {
+    case 'marketplace':
+      marketplacePage = 1;
+      break;
+    case 'reports':
+      reportsPage = 1;
+      break;
+    case 'ban-land':
+      banLandPage = 1;
+      break;
+    case 'trades':
+      tradesPage = 1;
+      break;
+    case 'activity':
+      activityPage = 1;
+      break;
   }
 }
 
@@ -1042,21 +1197,56 @@ function openAIPopup(ai) {
   function renderFilteredInventory() {
     const filter = aiInvSearchInput.value.trim().toLowerCase();
     inventoryGrid.innerHTML = '';
+    
+    // Group items by item ID to create stacks
+    const itemStacks = new Map();
+    
     const filtered = filter ? sortedInventory.filter(item =>
       item.item.name.toLowerCase().includes(filter)
     ) : sortedInventory;
+    
+    // Group items into stacks
     filtered.forEach(item => {
-      const itemEl = document.createElement('div');
-      itemEl.className = 'inventory-item';
-      let limitedIconHTML = '';
-      if (item.item.initialStock <= 50) {
-          limitedIconHTML = `<div class=\"inventory-item-limited-icon\">💎</div>`;
+      const itemId = item.item.id;
+      if (!itemStacks.has(itemId)) {
+        itemStacks.set(itemId, {
+          item: item.item,
+          copies: []
+        });
       }
+      itemStacks.get(itemId).copies.push(item);
+    });
+    
+    // Render each stack
+    itemStacks.forEach((stack, itemId) => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'inventory-item-stack';
+      
+      let limitedIconHTML = '';
+      if (stack.item.initialStock <= 50) {
+          limitedIconHTML = `<div class="inventory-item-stack-limited-icon">💎</div>`;
+      }
+      
+      // Create serial numbers list
+      const serials = stack.copies.map(copy => copy.serialNumber).sort((a, b) => a - b);
+      const serialsText = serials.length > 8 ? 
+        serials.slice(0, 8).join(', ') + ` +${serials.length - 8} more` :
+        serials.join(', ');
+      
+      // Calculate total value of all copies
+      const totalValue = stack.item.value * stack.copies.length;
+      
       itemEl.innerHTML = `
         ${limitedIconHTML}
-        <img src=\"${item.item.image}\" alt=\"${item.item.name}\">\n        <div class=\"inventory-item-name\">${item.item.name}</div>\n        <div class=\"inventory-item-value\">Value: R$ ${item.item.value.toLocaleString()} ${getValuationStatusIcon(item)}</div>\n        <div class=\"inventory-item-rap\" style="display:none;">RAP: R$ ${item.item.rap.toLocaleString()}</div>\n        <div class=\"inventory-item-serial\">#${item.serialNumber}</div>\n      `;
+        <img src="${stack.item.image}" alt="${stack.item.name}">
+        <div class="inventory-item-stack-name">${stack.item.name}</div>
+        <div class="inventory-item-stack-value">Total Value: R$ ${totalValue.toLocaleString()} ${getValuationStatusIcon(stack.item)}</div>
+        <div class="inventory-item-stack-count">Owned: ${stack.copies.length}</div>
+        <div class="inventory-item-stack-serials" title="Serial numbers: ${serials.join(', ')}">${serialsText}</div>
+      `;
       inventoryGrid.appendChild(itemEl);
     });
+    
     document.getElementById('ai-inventory-count').textContent = filtered.length;
   }
   aiInvSearchInput.oninput = renderFilteredInventory;
@@ -1413,7 +1603,13 @@ function renderMarketplace() {
     return;
   }
   
-  filteredMarketplace.forEach(item => {
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredMarketplace.length / ITEMS_PER_PAGE);
+  const startIndex = (marketplacePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const itemsToShow = filteredMarketplace.slice(startIndex, endIndex);
+  
+  itemsToShow.forEach(item => {
     const itemCard = document.createElement('div');
     itemCard.className = 'item-card';
     
@@ -1443,6 +1639,68 @@ function renderMarketplace() {
     
     itemList.appendChild(itemCard);
   });
+  
+  // Add pagination
+  renderPagination('marketplace', totalPages, marketplacePage, (page) => {
+    marketplacePage = page;
+    renderMarketplace();
+  });
+}
+
+// Pagination helper function
+function renderPagination(containerId, totalPages, currentPage, onPageChange) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  // Remove existing pagination
+  const existingPagination = container.querySelector('.pagination');
+  if (existingPagination) {
+    existingPagination.remove();
+  }
+  
+  if (totalPages <= 1) return;
+  
+  const pagination = document.createElement('div');
+  pagination.className = 'pagination';
+  
+  // Previous button
+  const prevButton = document.createElement('button');
+  prevButton.textContent = '← Previous';
+  prevButton.disabled = currentPage === 1;
+  prevButton.onclick = () => onPageChange(currentPage - 1);
+  pagination.appendChild(prevButton);
+  
+  // Page info
+  const pageInfo = document.createElement('span');
+  pageInfo.className = 'pagination-info';
+  pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+  pagination.appendChild(pageInfo);
+  
+  // Page numbers
+  const maxVisiblePages = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    const pageButton = document.createElement('button');
+    pageButton.textContent = i;
+    pageButton.className = i === currentPage ? 'active' : '';
+    pageButton.onclick = () => onPageChange(i);
+    pagination.appendChild(pageButton);
+  }
+  
+  // Next button
+  const nextButton = document.createElement('button');
+  nextButton.textContent = 'Next →';
+  nextButton.disabled = currentPage === totalPages;
+  nextButton.onclick = () => onPageChange(currentPage + 1);
+  pagination.appendChild(nextButton);
+  
+  container.appendChild(pagination);
 }
 
 // Leaderboard Rendering
@@ -1658,9 +1916,10 @@ function generateRandomReport() {
     reports.unshift(newReport);
     reportIndicator.classList.add('active');
     
-    // Only render if the tab is active, otherwise the unread status will be cleared
-    if(document.getElementById('reports').classList.contains('active')) {
-      renderReports();
+    // Reset pagination to first page when new reports are added
+    if (document.getElementById('reports').classList.contains('active')) {
+        reportsPage = 1;
+        renderReports();
     }
 }
 
@@ -1672,7 +1931,13 @@ function renderReports() {
         return;
     }
 
-    reports.forEach(report => {
+    // Calculate pagination
+    const totalPages = Math.ceil(reports.length / ITEMS_PER_PAGE);
+    const startIndex = (reportsPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const reportsToShow = reports.slice(startIndex, endIndex);
+
+    reportsToShow.forEach(report => {
         const reportCard = document.createElement('div');
         reportCard.className = 'report-card';
         if (report.isUnread) {
@@ -1700,6 +1965,12 @@ function renderReports() {
             <p class="report-reason">${reasonHtml}</p>
         `;
         reportList.appendChild(reportCard);
+    });
+    
+    // Add pagination
+    renderPagination('reports', totalPages, reportsPage, (page) => {
+        reportsPage = page;
+        renderReports();
     });
 }
 
@@ -2024,6 +2295,7 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
     
     updateAllLeaderboards();
     if(document.getElementById('trades').classList.contains('active')) {
+      tradesPage = 1; // Reset to first page when new trades are added
       renderTradeHistory();
     }
     renderMarketplace();
@@ -2056,11 +2328,19 @@ function renderTradeHistory() {
         const itemsB = trade.itemsFromB.some(i => i.item.name.toLowerCase().includes(filter));
         return itemsA || itemsB;
     }) : tradeHistory;
+    
     if (filteredTrades.length === 0) {
         tradeHistoryList.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--text-secondary);">No trades have occurred yet.</p>';
         return;
     }
-    filteredTrades.forEach(trade => {
+    
+    // Calculate pagination
+    const totalPages = Math.ceil(filteredTrades.length / ITEMS_PER_PAGE);
+    const startIndex = (tradesPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const tradesToShow = filteredTrades.slice(startIndex, endIndex);
+    
+    tradesToShow.forEach(trade => {
         const tradeCard = document.createElement('div');
         tradeCard.className = 'trade-card';
         const valueFromA = trade.itemsFromA.reduce((sum, item) => sum + item.item.value, 0);
@@ -2070,6 +2350,12 @@ function renderTradeHistory() {
         tradeCard.innerHTML = `
             <div class=\"trade-side\">\n                <div class=\"trade-card-header\">\n                    <span class=\"trade-card-user\">${trade.traderA.name}</span>\n                </div>\n                <div class=\"trade-items\">${itemsFromA_HTML}</div>\n                <div class=\"trade-total leaderboard-value\">Total: R$ ${valueFromA.toLocaleString()}</div>\n            </div>\n            <div style=\"font-size: 24px;\">&#x21C4;</div>\n            <div class=\"trade-side\">\n                <div class=\"trade-card-header\">\n                     <span class=\"trade-card-user\">${trade.traderB.name}</span>\n                </div>\n                <div class=\"trade-items\">${itemsFromB_HTML}</div>\n                <div class=\"trade-total leaderboard-value\">Total: R$ ${valueFromB.toLocaleString()}</div>\n            </div>\n        `;
         tradeHistoryList.appendChild(tradeCard);
+    });
+    
+    // Add pagination
+    renderPagination('trades', totalPages, tradesPage, (page) => {
+        tradesPage = page;
+        renderTradeHistory();
     });
 }
 
@@ -2182,7 +2468,10 @@ renderSerialTracker();
 document.getElementById('leaderboard-search-input').addEventListener('input', (e) => {
     renderLeaderboard(e.target.value);
 });
-document.getElementById('marketplace-search-input').addEventListener('input', renderMarketplace);
+document.getElementById('marketplace-search-input').addEventListener('input', () => {
+    marketplacePage = 1; // Reset to first page when searching
+    renderMarketplace();
+});
 
 // --- Settings ---
 function exportData() {
@@ -2507,6 +2796,7 @@ function logActivity(item, oldValue, newValue) {
     
     // Render activity if the tab is active
     if (document.getElementById('activity').classList.contains('active')) {
+        activityPage = 1; // Reset to first page when new activities are added
         renderActivity();
     }
 }
@@ -2519,7 +2809,13 @@ function renderActivity() {
         return;
     }
     
-    activityLog.forEach(activity => {
+    // Calculate pagination
+    const totalPages = Math.ceil(activityLog.length / ITEMS_PER_PAGE);
+    const startIndex = (activityPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const activitiesToShow = activityLog.slice(startIndex, endIndex);
+    
+    activitiesToShow.forEach(activity => {
         if (activity.type === 'value_update') {
             const activityCard = document.createElement('div');
             activityCard.className = 'activity-card';
@@ -2556,6 +2852,12 @@ function renderActivity() {
             
             activityList.appendChild(activityCard);
         }
+    });
+    
+    // Add pagination
+    renderPagination('activity', totalPages, activityPage, (page) => {
+        activityPage = page;
+        renderActivity();
     });
 }
 
@@ -2621,7 +2923,10 @@ function renderValueChart(item) {
 }
 
 // Attach search event for trade history
-document.getElementById('trade-history-search').addEventListener('input', () => renderTradeHistory());
+document.getElementById('trade-history-search').addEventListener('input', () => {
+    tradesPage = 1; // Reset to first page when searching
+    renderTradeHistory();
+});
 
 // --- AI Value History Tracking ---
 function ensureAIHistory(ai) {
