@@ -310,6 +310,24 @@
     .trade-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .trade-card-user { font-size: 18px; font-weight: bold; }
 
+    /* Activity */
+    .activity-list { display: flex; flex-direction: column; gap: 15px; }
+    .activity-card { background-color: var(--background-card); border-radius: var(--radius); padding: 20px; border-left: 5px solid var(--accent-blue); cursor: pointer; transition: background-color 0.2s; }
+    .activity-card:hover { background-color: var(--gray-dark); }
+    .activity-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .activity-item-info { display: flex; align-items: center; gap: 15px; }
+    .activity-item-image { width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--border-color); }
+    .activity-item-details { flex: 1; }
+    .activity-item-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+    .activity-item-stats { font-size: 14px; color: var(--gray-light); }
+    .activity-time { font-size: 14px; color: var(--gray-light); }
+    .activity-values { display: flex; gap: 20px; margin-top: 15px; }
+    .activity-value-box { flex: 1; text-align: center; padding: 15px; background-color: var(--gray-dark); border-radius: var(--radius); }
+    .activity-value-label { font-size: 14px; color: var(--gray-light); margin-bottom: 5px; }
+    .activity-value-amount { font-size: 24px; font-weight: bold; }
+    .activity-value-amount.new { color: var(--success-green); }
+    .activity-value-amount.old { color: var(--gray-light); }
+
     /* Admin Panel */
     .admin-panel-form { display: flex; flex-direction: column; gap: 20px; max-width: 500px; background-color: var(--background-card); padding: 25px; border-radius: var(--radius); }
     .settings-panel { display: flex; flex-direction: column; gap: 20px; max-width: 500px; }
@@ -333,6 +351,14 @@
         padding: 15px;
     }
 
+    /* Chart container constraints */
+    .chart-container {
+        position: relative;
+        height: 200px;
+        width: 100%;
+        overflow: hidden;
+    }
+
     /* Responsive styles - simplified for brevity */
     @media (max-width: 768px) {
       header { flex-direction: column; gap: 15px; padding: 15px; }
@@ -348,6 +374,17 @@
       .popup-content { padding: 20px; }
       .leaderboard-table th, .leaderboard-table td { padding: 10px; }
     }
+
+    /* Serial Tracker */
+    .serial-tracker-form { display: flex; flex-direction: column; gap: 20px; max-width: 500px; background-color: var(--background-card); padding: 25px; border-radius: var(--radius); margin-bottom: 25px; }
+    .serial-tracking-results { background-color: var(--background-card); border-radius: var(--radius); padding: 25px; }
+    .serial-ownership-history { display: flex; flex-direction: column; gap: 15px; }
+    .serial-ownership-entry { display: flex; justify-content: space-between; align-items: center; padding: 15px; background-color: var(--gray-dark); border-radius: var(--radius); border-left: 4px solid var(--accent-blue); }
+    .serial-ownership-user { font-weight: bold; font-size: 16px; }
+    .serial-ownership-time { font-size: 14px; color: var(--gray-light); }
+    .serial-ownership-action { font-size: 14px; color: var(--accent-blue); font-weight: bold; }
+    .serial-current-owner { background-color: var(--success-green); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+    .serial-not-found { text-align: center; padding: 40px; color: var(--gray-light); font-style: italic; }
   </style>
 </head>
 <body>
@@ -362,7 +399,9 @@
       </div>
       <button onclick="switchTab('ban-land')">Ban Land</button>
       <button onclick="switchTab('trades')">Trades</button>
+      <button onclick="switchTab('activity')">Activity</button>
       <button onclick="switchTab('admin-panel')">Admin Panel</button>
+      <button onclick="switchTab('serial-tracker')">Serial Tracker</button>
     </nav>
   </header>
 
@@ -443,6 +482,14 @@
         </div>
     </div>
 
+    <!-- Activity Tab -->
+    <div id="activity" class="tab-content">
+        <h2>Activity</h2>
+        <div id="activity-list" class="activity-list">
+            <!-- Activity entries will be dynamically inserted here -->
+        </div>
+    </div>
+
     <!-- Admin Panel Tab -->
     <div id="admin-panel" class="tab-content">
       <h2>Admin Panel</h2>
@@ -456,6 +503,25 @@
           <select id="admin-item-select" class="form-control"></select>
         </div>
         <button class="btn" onclick="adminGiveItem()">Give Item to User</button>
+      </div>
+    </div>
+
+    <!-- Serial Tracker Tab -->
+    <div id="serial-tracker" class="tab-content">
+      <h2>Serial Number Tracker</h2>
+      <div class="serial-tracker-form">
+        <div class="form-group">
+          <label class="form-label" for="serial-item-select">Select Item</label>
+          <select id="serial-item-select" class="form-control" onchange="updateSerialRange()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="serial-number-input">Serial Number</label>
+          <input type="number" id="serial-number-input" class="form-control" placeholder="Enter serial number" min="1">
+        </div>
+        <button class="btn" onclick="trackSerial()">Track Serial</button>
+      </div>
+      <div id="serial-tracking-results" class="serial-tracking-results">
+        <!-- Tracking results will be displayed here -->
       </div>
     </div>
 
@@ -560,11 +626,9 @@
         <div style="margin-top: 30px; display: flex; gap: 30px; flex-wrap: wrap; justify-content: center;">
           <div style="flex: 1; min-width: 250px; max-width: 400px;">
             <h4>Value History</h4>
-            <canvas id="ai-value-history-chart"></canvas>
-          </div>
-          <div style="flex: 1; min-width: 250px; max-width: 400px;">
-            <h4>RAP History</h4>
-            <canvas id="ai-rap-history-chart"></canvas>
+            <div class="chart-container">
+              <canvas id="ai-value-history-chart"></canvas>
+            </div>
           </div>
         </div>
       </div>
@@ -597,7 +661,7 @@
       </div>
       <div style="margin-top: 25px;">
           <h4>Value History</h4>
-          <div class="value-history-chart-container">
+          <div class="chart-container">
             <canvas id="value-history-chart"></canvas>
           </div>
       </div>
@@ -625,6 +689,13 @@ const bannedUsers = [];
 const tradeHistory = [];
 let masterTimer;
 
+// Activity state
+const activityLog = [];
+let activityIdCounter = 1;
+
+// Serial tracking state
+const serialOwnershipHistory = new Map(); // Map of "itemId-serialNumber" to ownership history
+
 // DOM Elements
 const marketplaceTab = document.getElementById('marketplace');
 const leaderboardTab = document.getElementById('leaderboard');
@@ -640,6 +711,10 @@ const bannedUserList = document.getElementById('banned-user-list').getElementsBy
 const tradeHistoryList = document.getElementById('trade-history-list');
 const adminItemSelect = document.getElementById('admin-item-select');
 const itemStatsPopup = document.getElementById('item-stats-popup');
+const activityList = document.getElementById('activity-list');
+const serialItemSelect = document.getElementById('serial-item-select');
+const serialNumberInput = document.getElementById('serial-number-input');
+const serialTrackingResults = document.getElementById('serial-tracking-results');
 let valueChartInstance = null;
 
 const BADGE_DEFINITIONS = {
@@ -737,6 +812,10 @@ function banAI(aiToBan) {
 
   if (admin && aiToBan.inventory.length > 0) {
     admin.inventory.push(...aiToBan.inventory);
+    // Log serial ownership changes for all transferred items
+    aiToBan.inventory.forEach(item => {
+        logSerialOwnershipChange(item.item.id, item.serialNumber, aiToBan, admin, 'ban_transfer');
+    });
   }
 
   const userIndex = aiUsers.findIndex(user => user.id === aiToBan.id);
@@ -777,6 +856,10 @@ function unbanAI(userToUnban, restoreItems) {
         if (admin) {
              const restoredSerials = new Set(itemsToRestore.map(i => `${i.item.id}-${i.serialNumber}`));
              admin.inventory = admin.inventory.filter(i => !restoredSerials.has(`${i.item.id}-${i.serialNumber}`));
+             // Log serial ownership changes for all restored items
+             itemsToRestore.forEach(item => {
+                 logSerialOwnershipChange(item.item.id, item.serialNumber, admin, unbannedUser, 'unban_restore');
+             });
         }
     } else {
         unbannedUser.inventory = [];
@@ -846,8 +929,12 @@ function switchTab(tabId) {
       renderBanLand();
   } else if (tabId === 'trades') {
       renderTradeHistory();
+  } else if (tabId === 'activity') {
+      renderActivity();
   } else if (tabId === 'admin-panel') {
       renderAdminPanel();
+  } else if (tabId === 'serial-tracker') {
+      renderSerialTracker();
   }
 }
 
@@ -989,6 +1076,9 @@ function openAIPopup(ai) {
           badgeContainer.appendChild(badgeEl);
       });
   }
+
+  // Render AI Charts
+  renderAICharts(ai);
 
   // Add action buttons
   aiPopupFooter.innerHTML = '';
@@ -1294,6 +1384,8 @@ function distributeItem(item, quantity = null) {
         purchaseTime: new Date(),
         serialNumber: serialNumber
       });
+      // Log initial ownership
+      logSerialOwnershipChange(item.id, serialNumber, null, selectedAI, 'initial_distribution');
       item.available--;
     }
   }
@@ -1682,25 +1774,38 @@ function attemptTopTierTrade() {
         return;
     }
 
-    // Weighted pick among the top players
-    const totalValue = top100Pool.reduce((sum, u) => sum + calculateAIValue(u), 0);
-    function weightedPick(pool) {
-        if (!pool || pool.length === 0) return null;
-        let r = Math.random() * totalValue;
-        for (const u of pool) {
-            r -= calculateAIValue(u);
-            if (r <= 0) return u;
+    // Weighted pick among the top players - heavily favor top 10
+    const top10Pool = top100Pool.slice(0, 10);
+    const restPool = top100Pool.slice(10);
+    
+    let traderA, traderB;
+    
+    // 70% chance to pick from top 10, 30% from rest
+    if (Math.random() < 0.7 && top10Pool.length >= 2) {
+        traderA = top10Pool[Math.floor(Math.random() * top10Pool.length)];
+        const traderAPool = top10Pool.filter(u => u.id !== traderA.id);
+        traderB = traderAPool[Math.floor(Math.random() * traderAPool.length)];
+    } else {
+        // Use weighted selection for the rest
+        const totalValue = restPool.reduce((sum, u) => sum + calculateAIValue(u), 0);
+        function weightedPick(pool) {
+            if (!pool || pool.length === 0) return null;
+            let r = Math.random() * totalValue;
+            for (const u of pool) {
+                r -= calculateAIValue(u);
+                if (r <= 0) return u;
+            }
+            return pool[pool.length - 1];
         }
-        return pool[pool.length - 1];
+        
+        traderA = weightedPick(restPool);
+        const traderBPool = restPool.filter(u => u.id !== traderA.id);
+        if (traderBPool.length === 0) {
+            attemptHighValueTrade();
+            return;
+        }
+        traderB = weightedPick(traderBPool);
     }
-
-    const traderA = weightedPick(top100Pool);
-    const traderBPool = top100Pool.filter(u => u.id !== traderA.id);
-    if (traderBPool.length === 0) {
-         attemptHighValueTrade(); // Fallback if we can't get a second trader
-         return;
-    }
-    const traderB = weightedPick(traderBPool);
 
     if (traderA && traderB) {
         negotiateAndExecuteTrade(traderA, traderB);
@@ -1740,19 +1845,30 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
     let shoppingList = []; // The items the initiator wants from the partner
     let shoppingListValue = 0;
 
-    // The initiator might want one big item or a few smaller ones.
-    const decision = Math.random();
-    if (decision < 0.7 && partnerInventory.length > 0) { // 70% chance to go for one big item
-        shoppingList.push(partnerInventory[0]);
-    } else { // 30% chance to go for a bundle of smaller/medium items
-        const initiatorValue = calculateAIValue(initiator);
-        const affordableItems = partnerInventory.filter(i => getPerceivedValue(i.item) < initiatorValue * 0.6);
-        affordableItems.sort(() => 0.5 - Math.random()); // Shuffle to get variety
-        for(const item of affordableItems) {
-            if (shoppingList.length >= 3) break; // Don't ask for too much at once
-            if (shoppingListValue + getPerceivedValue(item.item) < initiatorValue * 0.8) {
-                shoppingList.push(item);
-                shoppingListValue += getPerceivedValue(item.item);
+    // Special handling for low stock items - they should be more desirable
+    const lowStockItems = partnerInventory.filter(i => i.item.initialStock <= 50);
+    const regularItems = partnerInventory.filter(i => i.item.initialStock > 50);
+    
+    // 40% chance to specifically target low stock items if available
+    if (lowStockItems.length > 0 && Math.random() < 0.4) {
+        shoppingList.push(lowStockItems[0]);
+        shoppingListValue = getPerceivedValue(lowStockItems[0].item);
+    } else {
+        // The initiator might want one big item or a few smaller ones.
+        const decision = Math.random();
+        if (decision < 0.7 && partnerInventory.length > 0) { // 70% chance to go for one big item
+            shoppingList.push(partnerInventory[0]);
+            shoppingListValue = getPerceivedValue(partnerInventory[0].item);
+        } else { // 30% chance to go for a bundle of smaller/medium items
+            const initiatorValue = calculateAIValue(initiator);
+            const affordableItems = partnerInventory.filter(i => getPerceivedValue(i.item) < initiatorValue * 0.6);
+            affordableItems.sort(() => 0.5 - Math.random()); // Shuffle to get variety
+            for(const item of affordableItems) {
+                if (shoppingList.length >= 3) break; // Don't ask for too much at once
+                if (shoppingListValue + getPerceivedValue(item.item) < initiatorValue * 0.8) {
+                    shoppingList.push(item);
+                    shoppingListValue += getPerceivedValue(item.item);
+                }
             }
         }
     }
@@ -1773,7 +1889,7 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
     // Initiator builds an offer to match the partner's perceived value
     for (const item of initiatorTradableItems) {
         if (initiatorOffer.length >= 5) break;
-        if (initiatorValue >= partnerValue * 1.05) break; // Aim for a slight overpay
+        if (initiatorValue >= partnerValue * 1.02) break; // Reduced from 1.05 to 1.02 for more balanced trades
         
         initiatorOffer.push(item);
         initiatorValue += getPerceivedValue(item.item);
@@ -1791,18 +1907,17 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
     const totalTradeValue = rawInitiatorValue + rawPartnerValue;
     const exchangeRatio = rawInitiatorValue / rawPartnerValue;
 
-    // For low-to-mid value trades, prevent extreme offers.
+    // Tighter balance constraints to reduce overpays
     if (totalTradeValue < 1_000_000) {
-        // Auto-decline if one side is offering more than 2x overpay, or receiving less than 60% of the value they're giving up.
-        // This is loosened to allow for perceived value to have a stronger influence.
-        if (exchangeRatio > 2.0 || exchangeRatio < 0.6) {
+        // Auto-decline if one side is offering more than 1.5x overpay, or receiving less than 70% of the value they're giving up.
+        if (exchangeRatio > 1.5 || exchangeRatio < 0.7) {
             return false;
         }
     }
     // For high-value trades, allow more flexibility but still prevent absurd trades.
     else {
-        // e.g. 2.5M for 1M is a potential deal, but 2.6M for 1M is not.
-        if (exchangeRatio > 2.5 || exchangeRatio < 0.5) { 
+        // e.g. 1.8M for 1M is a potential deal, but 2.0M for 1M is not.
+        if (exchangeRatio > 1.8 || exchangeRatio < 0.6) { 
             return false;
         }
     }
@@ -1812,14 +1927,14 @@ function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
     const finalRatio = initiatorValue / partnerValue;
     
     let acceptanceChance = 0;
-    if (finalRatio < 0.98) acceptanceChance = 0.1;  // Unlikely to accept underpay
-    else if (finalRatio < 1.2) acceptanceChance = 0.8; // Very likely to accept fair/slight OP
-    else acceptanceChance = 0.4; // Less likely to accept a huge OP
+    if (finalRatio < 0.95) acceptanceChance = 0.05;  // Very unlikely to accept underpay
+    else if (finalRatio < 1.1) acceptanceChance = 0.9; // Very likely to accept fair/slight OP
+    else acceptanceChance = 0.3; // Less likely to accept a huge OP
 
     if (isForced) acceptanceChance = 1.0;
     
     // The partner has a small chance to "get greedy" and ask for one more small item if the offer is good
-    if (Math.random() < 0.2 && finalRatio > 1.1 && initiatorTradableItems.length > initiatorOffer.length) {
+    if (Math.random() < 0.15 && finalRatio > 1.05 && initiatorTradableItems.length > initiatorOffer.length) {
         const smallestAvailableItem = initiatorTradableItems.find(i => !initiatorOffer.some(o => o.serialNumber === i.serialNumber));
         if (smallestAvailableItem && initiatorOffer.length < 5) {
             initiatorOffer.push(smallestAvailableItem);
@@ -1879,6 +1994,8 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
         if(index > -1) {
             traderA.inventory.splice(index, 1);
             traderB.inventory.push(item);
+            // Log serial ownership change
+            logSerialOwnershipChange(item.item.id, item.serialNumber, traderA, traderB, 'trade');
         }
     }
 
@@ -1888,6 +2005,8 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
         if(index > -1) {
             traderB.inventory.splice(index, 1);
             traderA.inventory.push(item);
+            // Log serial ownership change
+            logSerialOwnershipChange(item.item.id, item.serialNumber, traderB, traderA, 'trade');
         }
     }
 
@@ -1956,20 +2075,27 @@ function renderTradeHistory() {
 
 function startTradingTimer() {
     setInterval(() => {
-        // Attempt to run 3 trades every 10 seconds.
-        for (let i = 0; i < 3; i++) {
+        // Attempt to run 5 trades every 8 seconds (increased from 3 trades every 10 seconds).
+        for (let i = 0; i < 5; i++) {
             // Use a slight delay between each attempt within the batch
-            setTimeout(attemptRandomTrade, i * 100);
+            setTimeout(() => {
+                // 60% chance for top tier trades, 40% for random trades
+                if (Math.random() < 0.6) {
+                    attemptTopTierTrade();
+                } else {
+                    attemptRandomTrade();
+                }
+            }, i * 100);
         }
-    }, 10000);
+    }, 8000);
 
     // Also keep the inactivity check to force trades if the market is stale.
     setInterval(() => {
-        if (new Date() - lastTradeTimestamp > 30000) {
+        if (new Date() - lastTradeTimestamp > 20000) { // Reduced from 30 seconds to 20 seconds
             console.log("Forcing a trade due to inactivity...");
             attemptRandomTrade(true); // The 'true' flag makes the AIs highly likely to accept
         }
-    }, 15000);
+    }, 10000); // Reduced from 15 seconds to 10 seconds
 }
 
 // --- End of Trading System ---
@@ -2034,6 +2160,10 @@ function adminGiveItem() {
 
     const inventory = targetUser.isBanned ? targetUser.bannedInventory : targetUser.inventory;
     inventory.push(newItem);
+    
+    // Log serial ownership change
+    const admin = aiUsers.find(ai => ai.isAdmin);
+    logSerialOwnershipChange(itemTemplate.id, newSerialNumber, admin, targetUser, 'admin_grant');
 
     userIdInput.value = '';
     alert(`Successfully gave "${itemTemplate.name}" to ${targetUser.name} (ID: ${targetUser.id}).`);
@@ -2047,6 +2177,7 @@ updateAllLeaderboards();
 startReportTimer();
 startTradingTimer();
 renderBanLand();
+renderSerialTracker();
 
 document.getElementById('leaderboard-search-input').addEventListener('input', (e) => {
     renderLeaderboard(e.target.value);
@@ -2062,8 +2193,11 @@ function exportData() {
             bannedUsers: bannedUsers,
             reports: reports,
             tradeHistory: tradeHistory,
+            activityLog: activityLog,
+            serialOwnershipHistory: Array.from(serialOwnershipHistory.entries()),
             itemIdCounter: itemIdCounter,
             reportIdCounter: reportIdCounter,
+            activityIdCounter: activityIdCounter,
         };
 
         // Instead of stringifying the whole object, we stringify parts
@@ -2075,8 +2209,11 @@ function exportData() {
             `"bannedUsers": ${JSON.stringify(dataToSave.bannedUsers)},`,
             `"reports": ${JSON.stringify(dataToSave.reports)},`,
             `"tradeHistory": ${JSON.stringify(dataToSave.tradeHistory)},`,
+            `"activityLog": ${JSON.stringify(dataToSave.activityLog)},`,
+            `"serialOwnershipHistory": ${JSON.stringify(dataToSave.serialOwnershipHistory)},`,
             `"itemIdCounter": ${JSON.stringify(dataToSave.itemIdCounter)},`,
-            `"reportIdCounter": ${JSON.stringify(dataToSave.reportIdCounter)}`,
+            `"reportIdCounter": ${JSON.stringify(dataToSave.reportIdCounter)},`,
+            `"activityIdCounter": ${JSON.stringify(dataToSave.activityIdCounter)}`,
             '}'
         ];
 
@@ -2125,6 +2262,8 @@ function importData(event) {
                 bannedUsers.length = 0;
                 reports.length = 0;
                 tradeHistory.length = 0;
+                activityLog.length = 0;
+                serialOwnershipHistory.clear();
 
                 // Push new state
                 marketplace.push(...data.marketplace);
@@ -2143,9 +2282,20 @@ function importData(event) {
                     data.tradeHistory.forEach(trade => trade.timestamp = new Date(trade.timestamp));
                     tradeHistory.push(...data.tradeHistory);
                 }
+                if (data.activityLog) {
+                    data.activityLog.forEach(activity => activity.timestamp = new Date(activity.timestamp));
+                    activityLog.push(...data.activityLog);
+                }
+                if (data.serialOwnershipHistory) {
+                    data.serialOwnershipHistory.forEach(([key, history]) => {
+                        history.forEach(entry => entry.timestamp = new Date(entry.timestamp));
+                        serialOwnershipHistory.set(key, history);
+                    });
+                }
 
                 itemIdCounter = data.itemIdCounter || itemIdCounter;
                 reportIdCounter = data.reportIdCounter || reportIdCounter;
+                activityIdCounter = data.activityIdCounter || activityIdCounter;
                 
                 // Re-render everything
                 updateAllLeaderboards();
@@ -2153,6 +2303,7 @@ function importData(event) {
                 renderReports();
                 renderBanLand();
                 renderTradeHistory();
+                renderActivity();
                 renderAdminPanel();
 
                 // Switch to a default tab
@@ -2325,12 +2476,87 @@ function updateItemValueFromTrades(item) {
     
     // Only update if the rounded value is different and positive
     if (newRoundedValue !== item.value && newRoundedValue > 0) {
+        const oldValue = item.value;
         item.value = newRoundedValue;
+
+        // Log the activity
+        logActivity(item, oldValue, newRoundedValue);
 
         // Add to value history
         item.stats.valueHistory.push({ date: new Date(), value: item.value });
         if (item.stats.valueHistory.length > 100) item.stats.valueHistory.shift();
     }
+}
+
+function logActivity(item, oldValue, newValue) {
+    const activity = {
+        id: activityIdCounter++,
+        item: item,
+        oldValue: oldValue,
+        newValue: newValue,
+        timestamp: new Date(),
+        type: 'value_update'
+    };
+    
+    activityLog.unshift(activity);
+    
+    // Keep only the last 100 activities for performance
+    if (activityLog.length > 100) {
+        activityLog.pop();
+    }
+    
+    // Render activity if the tab is active
+    if (document.getElementById('activity').classList.contains('active')) {
+        renderActivity();
+    }
+}
+
+function renderActivity() {
+    activityList.innerHTML = '';
+    
+    if (activityLog.length === 0) {
+        activityList.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--gray-light);">No activity yet.</p>';
+        return;
+    }
+    
+    activityLog.forEach(activity => {
+        if (activity.type === 'value_update') {
+            const activityCard = document.createElement('div');
+            activityCard.className = 'activity-card';
+            activityCard.onclick = () => openItemStatsPopup(activity.item.id);
+            
+            const timeString = activity.timestamp.toLocaleTimeString();
+            const dateString = activity.timestamp.toLocaleDateString();
+            
+            activityCard.innerHTML = `
+                <div class="activity-header">
+                    <div class="activity-item-info">
+                        <img src="${activity.item.image}" alt="${activity.item.name}" class="activity-item-image">
+                        <div class="activity-item-details">
+                            <div class="activity-item-name">${activity.item.name}</div>
+                            <div class="activity-item-stats">
+                                Stock: ${activity.item.available}/${activity.item.initialStock} • 
+                                Trades: ${activity.item.stats?.tradeCount || 0}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-time">${dateString} ${timeString}</div>
+                </div>
+                <div class="activity-values">
+                    <div class="activity-value-box">
+                        <div class="activity-value-label">New Value</div>
+                        <div class="activity-value-amount new">R$ ${activity.newValue.toLocaleString()}</div>
+                    </div>
+                    <div class="activity-value-box">
+                        <div class="activity-value-label">Old Value</div>
+                        <div class="activity-value-amount old">R$ ${activity.oldValue.toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+            
+            activityList.appendChild(activityCard);
+        }
+    });
 }
 
 function renderValueChart(item) {
@@ -2351,12 +2577,12 @@ function renderValueChart(item) {
             datasets: [{
                 label: 'Item Value (R$)',
                 data: data,
-                borderColor: 'white',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderColor: '#00E87E',
+                backgroundColor: 'rgba(0, 232, 126, 0.1)',
                 fill: true,
                 tension: 0.1,
                 pointRadius: 4,
-                pointBackgroundColor: 'white'
+                pointBackgroundColor: '#00E87E'
             }]
         },
         options: {
@@ -2378,12 +2604,17 @@ function renderValueChart(item) {
                 y: {
                     beginAtZero: false,
                     ticks: { color: 'white' },
-                     grid: { color: 'rgba(255, 255, 255, 0.2)' }
+                    grid: { color: 'rgba(255, 255, 255, 0.2)' }
                 },
                 x: {
                     ticks: { color: 'white' },
-                     grid: { display: false }
+                    grid: { display: false },
+                    maxTicksLimit: 8
                 }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
             }
         }
     });
@@ -2392,43 +2623,39 @@ function renderValueChart(item) {
 // Attach search event for trade history
 document.getElementById('trade-history-search').addEventListener('input', () => renderTradeHistory());
 
-// --- AI Value/RAP History Tracking ---
+// --- AI Value History Tracking ---
 function ensureAIHistory(ai) {
   if (!ai.valueHistory) ai.valueHistory = [];
-  if (!ai.rapHistory) ai.rapHistory = [];
 }
 
 function recordAIHistory(ai) {
   ensureAIHistory(ai);
   const now = new Date();
   const value = calculateAIValue(ai);
-  const rap = calculateAIRAP(ai);
   ai.valueHistory.push({ date: now, value });
-  ai.rapHistory.push({ date: now, rap });
   // Keep history to last 100 points for performance
   if (ai.valueHistory.length > 100) ai.valueHistory = ai.valueHistory.slice(-100);
-  if (ai.rapHistory.length > 100) ai.rapHistory = ai.rapHistory.slice(-100);
 }
 
 function recordAllAIHistory() {
   aiUsers.forEach(ai => recordAIHistory(ai));
 }
 
-// Start a timer to record all AI histories every 5 minutes
-setInterval(recordAllAIHistory, 5 * 60 * 1000);
+// Start a timer to record all AI histories every 10 minutes
+setInterval(recordAllAIHistory, 10 * 60 * 1000);
 
 let aiValueChartInstance = null;
 let aiRAPChartInstance = null;
 function renderAICharts(ai) {
   ensureAIHistory(ai);
   const valueCtx = document.getElementById('ai-value-history-chart').getContext('2d');
-  const rapCtx = document.getElementById('ai-rap-history-chart').getContext('2d');
+  
   if (aiValueChartInstance) aiValueChartInstance.destroy();
-  if (aiRAPChartInstance) aiRAPChartInstance.destroy();
+  
   const valueHistory = ai.valueHistory || [];
-  const rapHistory = ai.rapHistory || [];
   const valueLabels = valueHistory.map(e => new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
   const valueData = valueHistory.map(e => e.value);
+  
   aiValueChartInstance = new Chart(valueCtx, {
     type: 'line',
     data: {
@@ -2436,48 +2663,44 @@ function renderAICharts(ai) {
       datasets: [{
         label: 'Value',
         data: valueData,
-        borderColor: 'var(--primary-blue)',
-        backgroundColor: 'rgba(0,162,255,0.1)',
+        borderColor: '#00E87E',
+        backgroundColor: 'rgba(0, 232, 126, 0.1)',
         fill: true,
         tension: 0.1,
         pointRadius: 2,
-        pointBackgroundColor: 'var(--primary-blue)'
+        pointBackgroundColor: '#00E87E'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          titleColor: 'white',
+          bodyColor: 'white',
+          callbacks: {
+            label: function(context) {
+              return `Value: R$ ${context.parsed.y.toLocaleString()}`;
+            }
+          }
+        }
+      },
       scales: {
-        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.2)' } },
-        x: { ticks: { color: 'white' }, grid: { display: false } }
-      }
-    }
-  });
-  const rapLabels = rapHistory.map(e => new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
-  const rapData = rapHistory.map(e => e.rap);
-  aiRAPChartInstance = new Chart(rapCtx, {
-    type: 'line',
-    data: {
-      labels: rapLabels,
-      datasets: [{
-        label: 'RAP',
-        data: rapData,
-        borderColor: 'var(--rap-yellow)',
-        backgroundColor: 'rgba(255,204,0,0.1)',
-        fill: true,
-        tension: 0.1,
-        pointRadius: 2,
-        pointBackgroundColor: 'var(--rap-yellow)'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.2)' } },
-        x: { ticks: { color: 'white' }, grid: { display: false } }
+        y: { 
+          ticks: { color: 'white' }, 
+          grid: { color: 'rgba(255,255,255,0.2)' },
+          beginAtZero: false
+        },
+        x: { 
+          ticks: { color: 'white' }, 
+          grid: { display: false },
+          maxTicksLimit: 8
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index'
       }
     }
   });
@@ -2509,10 +2732,10 @@ function getPerceivedValue(item) {
     // 1. Stock Multiplier (Now much more influential)
     const stock = item.initialStock;
     let stockMultiplier = 1.0;
-    if (stock <= 10) stockMultiplier = 3.0;      // Dominus-level rarity
-    else if (stock <= 50) stockMultiplier = 2.2; // Very rare, high impact
-    else if (stock <= 150) stockMultiplier = 1.6; // Genuinely rare
-    else if (stock <= 500) stockMultiplier = 1.2; // Uncommon
+    if (stock <= 10) stockMultiplier = 4.0;      // Dominus-level rarity - increased from 3.0
+    else if (stock <= 50) stockMultiplier = 2.8; // Very rare, high impact - increased from 2.2
+    else if (stock <= 150) stockMultiplier = 1.8; // Genuinely rare - increased from 1.6
+    else if (stock <= 500) stockMultiplier = 1.3; // Uncommon - increased from 1.2
     
     perceivedValue *= stockMultiplier;
 
@@ -2540,6 +2763,136 @@ function getPerceivedValue(item) {
     }
 
     return Math.floor(perceivedValue);
+}
+
+// --- Serial Tracking System ---
+function logSerialOwnershipChange(itemId, serialNumber, fromUser, toUser, action = 'transfer') {
+    const key = `${itemId}-${serialNumber}`;
+    
+    if (!serialOwnershipHistory.has(key)) {
+        serialOwnershipHistory.set(key, []);
+    }
+    
+    const history = serialOwnershipHistory.get(key);
+    history.push({
+        timestamp: new Date(),
+        fromUser: fromUser ? fromUser.name : 'System',
+        toUser: toUser ? toUser.name : 'System',
+        action: action
+    });
+    
+    // Keep only the last 50 entries for performance
+    if (history.length > 50) {
+        history.splice(0, history.length - 50);
+    }
+}
+
+function findSerialOwner(itemId, serialNumber) {
+    const key = `${itemId}-${serialNumber}`;
+    
+    // Check active users first
+    for (const user of aiUsers) {
+        const inventory = user.isBanned ? user.bannedInventory : user.inventory;
+        if (inventory.some(item => item.item.id === itemId && item.serialNumber === serialNumber)) {
+            return user;
+        }
+    }
+    
+    // Check banned users
+    for (const user of bannedUsers) {
+        if (user.bannedInventory.some(item => item.item.id === itemId && item.serialNumber === serialNumber)) {
+            return user;
+        }
+    }
+    
+    return null;
+}
+
+function updateSerialRange() {
+    const selectedItem = marketplace.find(item => item.id === parseInt(serialItemSelect.value));
+    if (selectedItem) {
+        serialNumberInput.max = selectedItem.initialStock;
+        serialNumberInput.placeholder = `Enter serial number (1-${selectedItem.initialStock})`;
+    }
+}
+
+function trackSerial() {
+    const itemId = parseInt(serialItemSelect.value);
+    const serialNumber = parseInt(serialNumberInput.value);
+    
+    if (!itemId || !serialNumber) {
+        alert('Please select an item and enter a serial number.');
+        return;
+    }
+    
+    const item = marketplace.find(i => i.id === itemId);
+    if (!item) {
+        alert('Item not found.');
+        return;
+    }
+    
+    if (serialNumber < 1 || serialNumber > item.initialStock) {
+        alert(`Serial number must be between 1 and ${item.initialStock}.`);
+        return;
+    }
+    
+    const currentOwner = findSerialOwner(itemId, serialNumber);
+    const key = `${itemId}-${serialNumber}`;
+    const history = serialOwnershipHistory.get(key) || [];
+    
+    let resultsHTML = `
+        <h3>Serial #${serialNumber} - ${item.name}</h3>
+        <div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center;">
+            <img src="${item.image}" alt="${item.name}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);">
+            <div>
+                <p><strong>Current Value:</strong> R$ ${item.value.toLocaleString()}</p>
+                <p><strong>Current Owner:</strong> ${currentOwner ? currentOwner.name : 'Unknown'}</p>
+                ${currentOwner ? `<span class="serial-current-owner">CURRENT OWNER</span>` : ''}
+            </div>
+        </div>
+    `;
+    
+    if (history.length === 0) {
+        resultsHTML += '<div class="serial-not-found">No ownership history found for this serial number.</div>';
+    } else {
+        resultsHTML += '<h4>Ownership History</h4><div class="serial-ownership-history">';
+        
+        history.forEach((entry, index) => {
+            const isCurrent = index === history.length - 1 && currentOwner && entry.toUser === currentOwner.name;
+            resultsHTML += `
+                <div class="serial-ownership-entry">
+                    <div>
+                        <div class="serial-ownership-user">${entry.toUser}</div>
+                        <div class="serial-ownership-time">${entry.timestamp.toLocaleDateString()} ${entry.timestamp.toLocaleTimeString()}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="serial-ownership-action">${entry.action.toUpperCase()}</span>
+                        ${isCurrent ? '<span class="serial-current-owner">CURRENT</span>' : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        resultsHTML += '</div>';
+    }
+    
+    serialTrackingResults.innerHTML = resultsHTML;
+}
+
+function renderSerialTracker() {
+    // Populate item select
+    serialItemSelect.innerHTML = '';
+    const sortedMarketplace = [...marketplace].sort((a,b) => a.name.localeCompare(b.name));
+    
+    sortedMarketplace.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = `${item.name} (Stock: ${item.initialStock})`;
+        serialItemSelect.appendChild(option);
+    });
+    
+    // Clear results
+    serialTrackingResults.innerHTML = '<div class="serial-not-found">Select an item and enter a serial number to track ownership history.</div>';
 }
   </script>
 </body>
