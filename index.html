@@ -2244,10 +2244,12 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
     // Calculate pay ratios and update stats
     if (valueFromB > 0) {
         const ratioForA = valueFromA / valueFromB; // How much A gave vs what B gave
+        console.log(`Trade: A gave ${valueFromA.toLocaleString()}, B gave ${valueFromB.toLocaleString()}, ratioForA=${ratioForA.toFixed(3)}`);
         itemsFromB.forEach(invItem => { // Items B gave away
              invItem.item.stats.netPayRatioSum += (ratioForA - 1);
              invItem.item.stats.recentTradeRatios.push(ratioForA - 1);
              if (invItem.item.stats.recentTradeRatios.length > 20) invItem.item.stats.recentTradeRatios.shift();
+             console.log(`  B's item "${invItem.item.name}" gets ratio ${(ratioForA - 1).toFixed(3)}`);
         });
     }
     if (valueFromA > 0) {
@@ -2256,6 +2258,7 @@ function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
             invItem.item.stats.netPayRatioSum += (ratioForB - 1);
             invItem.item.stats.recentTradeRatios.push(ratioForB - 1);
             if (invItem.item.stats.recentTradeRatios.length > 20) invItem.item.stats.recentTradeRatios.shift();
+            console.log(`  A's item "${invItem.item.name}" gets ratio ${(ratioForB - 1).toFixed(3)}`);
         });
     }
     
@@ -2755,6 +2758,8 @@ function updateItemValueFromTrades(item) {
     const decay = Math.max(0.05, 1 - (tradeCount / stabilityPoint)); // Linearly decay until the stability point, then maintain a minimal change factor.
     const adjustmentFactor = baseFactor * decay;
     
+    // FIXED: When an item is overpaid for (positive ratio), it should increase in value
+    // When an item is underpaid for (negative ratio), it should decrease in value
     const change = item.value * avgPayRatio * adjustmentFactor;
     
     // New value must not fall below a certain threshold of its initial price, e.g., 25%
@@ -2762,6 +2767,11 @@ function updateItemValueFromTrades(item) {
     
     let newValue = Math.max(floorValue, item.value + change);
     const newRoundedValue = Math.round(newValue);
+    
+    // Debug logging
+    if (Math.abs(avgPayRatio) > 0.1) { // Only log significant changes
+        console.log(`${item.name}: avgPayRatio=${avgPayRatio.toFixed(3)}, change=${change.toFixed(0)}, oldValue=${item.value}, newValue=${newRoundedValue}`);
+    }
     
     // Only update if the rounded value is different and positive
     if (newRoundedValue !== item.value && newRoundedValue > 0) {
