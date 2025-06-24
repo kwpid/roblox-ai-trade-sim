@@ -521,8 +521,22 @@
     <div id="marketplace" class="tab-content active">
       <div class="marketplace-header">
         <h2>Marketplace</h2>
-        <input type="text" id="marketplace-search-input" class="form-control" placeholder="Search items..." style="max-width: 300px; margin-left: auto; margin-right: 20px;">
-        <button class="btn" onclick="openItemPopup()">+ Release Item</button>
+        <div style="display: flex; gap: 15px; align-items: center; margin-left: auto;">
+          <input type="text" id="marketplace-search-input" class="form-control" placeholder="Search items..." style="max-width: 300px;">
+          <select id="marketplace-sort-select" class="form-control" style="max-width: 200px;" onchange="renderMarketplace()">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="value-high">Highest Value</option>
+            <option value="value-low">Lowest Value</option>
+            <option value="demand-high">Highest Demand</option>
+            <option value="demand-low">Lowest Demand</option>
+            <option value="stock-low">Lowest Stock</option>
+            <option value="stock-high">Highest Stock</option>
+            <option value="name-az">Name A-Z</option>
+            <option value="name-za">Name Z-A</option>
+          </select>
+          <button class="btn" onclick="openItemPopup()">+ Release Item</button>
+        </div>
       </div>
       <div class="item-grid" id="item-list">
         <!-- Items will be dynamically inserted here -->
@@ -615,6 +629,24 @@
         </div>
         <button class="btn" onclick="adminGiveItem()">Give Item to User</button>
       </div>
+      
+      <!-- Item Export/Import Section -->
+      <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid var(--border-color);">
+        <h3>Item Management</h3>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 300px;">
+            <h4>Export Items</h4>
+            <p style="color: var(--gray-light); margin-bottom: 15px;">Export all marketplace items to a file. This saves item data without value history.</p>
+            <button class="btn" onclick="exportItems()">Export All Items</button>
+          </div>
+          <div style="flex: 1; min-width: 300px;">
+            <h4>Import Items</h4>
+            <p style="color: var(--gray-light); margin-bottom: 15px;">Import previously exported items. This will add items to the marketplace.</p>
+            <button class="btn btn-secondary" onclick="document.getElementById('import-items-input').click()">Import Items</button>
+            <input type="file" id="import-items-input" style="display: none;" accept=".json" onchange="importItems(event)">
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Serial Tracker Tab -->
@@ -689,6 +721,37 @@
         <div class="form-group">
           <label class="form-label" for="stock">Stock</label>
           <input type="number" id="stock" class="form-control" placeholder="100" min="1">
+        </div>
+        <!-- New desirability fields -->
+        <div class="form-group">
+          <label class="form-label" for="item-hype">Hype/Desire</label>
+          <select id="item-hype" class="form-control">
+            <option value="Terrible">Terrible</option>
+            <option value="Low">Low</option>
+            <option value="Mid">Mid</option>
+            <option value="Good">Good</option>
+            <option value="Amazing">Amazing</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="item-aesthetic">Aesthetic</label>
+          <select id="item-aesthetic" class="form-control">
+            <option value="Ugly">Ugly</option>
+            <option value="Basical">Basical</option>
+            <option value="Clean">Clean</option>
+            <option value="Drippy">Drippy</option>
+            <option value="Iconic">Iconic</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="item-clout">Clout Factor</label>
+          <select id="item-clout" class="form-control">
+            <option value="None">None</option>
+            <option value="Minor Flex">Minor Flex</option>
+            <option value="Popular Flex">Popular Flex</option>
+            <option value="Major Flex">Major Flex</option>
+            <option value="God-Tier Status">God-Tier Status</option>
+          </select>
         </div>
       </div>
       
@@ -1317,6 +1380,10 @@ function handleItemSubmit() {
   const valueInput = document.getElementById('item-value');
   const rapInput = document.getElementById('item-rap');
   const stockInput = document.getElementById('stock');
+  // New desirability fields
+  const hypeInput = document.getElementById('item-hype');
+  const aestheticInput = document.getElementById('item-aesthetic');
+  const cloutInput = document.getElementById('item-clout');
 
   // --- Image Validation ---
   let imagePromise;
@@ -1351,6 +1418,10 @@ function handleItemSubmit() {
 
   const itemData = {
     name: nameInput.value.trim(),
+    // New desirability fields
+    hype: hypeInput.value,
+    aesthetic: aestheticInput.value,
+    clout: cloutInput.value,
   };
 
   if (!valueInput.value || valueInput.value < 1) {
@@ -1400,7 +1471,11 @@ function releaseItem(itemData) {
     rap: 0, // Set RAP to 0 or remove
     initialStock: itemData.stock,
     available: itemData.stock,
-    serialNumbers: Array.from({length: itemData.stock}, (_, i) => i + 1)
+    serialNumbers: Array.from({length: itemData.stock}, (_, i) => i + 1),
+    // New desirability fields
+    hype: itemData.hype,
+    aesthetic: itemData.aesthetic,
+    clout: itemData.clout
   };
 
   marketplace.unshift(newItem);
@@ -1430,6 +1505,10 @@ function updateItem(itemId, updates) {
 
   // Update basic properties
   item.name = updates.name;
+  // New desirability fields
+  item.hype = updates.hype;
+  item.aesthetic = updates.aesthetic;
+  item.clout = updates.clout;
   
   const oldValue = item.value;
   item.value = updates.value;
@@ -1589,11 +1668,41 @@ function renderMarketplace() {
   itemList.innerHTML = '';
   
   const searchInput = document.getElementById('marketplace-search-input');
+  const sortSelect = document.getElementById('marketplace-sort-select');
   const filter = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  const sortBy = sortSelect ? sortSelect.value : 'newest';
   
-  const filteredMarketplace = filter 
+  let filteredMarketplace = filter 
     ? marketplace.filter(item => item.name.toLowerCase().includes(filter))
     : marketplace;
+
+  // Apply sorting
+  filteredMarketplace = [...filteredMarketplace].sort((a, b) => {
+    switch (sortBy) {
+      case 'newest':
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      case 'oldest':
+        return new Date(a.createdAt) - new Date(b.createdAt);
+      case 'value-high':
+        return b.value - a.value;
+      case 'value-low':
+        return a.value - b.value;
+      case 'demand-high':
+        return getDemandScore(b) - getDemandScore(a);
+      case 'demand-low':
+        return getDemandScore(a) - getDemandScore(b);
+      case 'stock-low':
+        return a.available - b.available;
+      case 'stock-high':
+        return b.available - a.available;
+      case 'name-az':
+        return a.name.localeCompare(b.name);
+      case 'name-za':
+        return b.name.localeCompare(a.name);
+      default:
+        return new Date(b.createdAt) - new Date(a.createdAt);
+    }
+  });
 
   if (filteredMarketplace.length === 0) {
     const emptyMessage = filter 
@@ -1621,6 +1730,11 @@ function renderMarketplace() {
       <div class="item-details">
         <div class="item-name">${item.name}</div>
         <div class="item-value">Value: R$ ${item.value.toLocaleString()} ${getValuationStatusIcon(item)}</div>
+        <div style="font-size: 13px; margin-bottom: 6px; color: var(--gray-light);">
+          <span title="Hype/Desire">🔥 ${item.hype}</span> |
+          <span title="Aesthetic">🎨 ${item.aesthetic}</span> |
+          <span title="Clout Factor">💎 ${item.clout}</span>
+        </div>
         <div class="item-rap" style="display:none;">RAP: R$ ${item.rap.toLocaleString()}</div>
         <div class="item-stock">
           Stock: ${item.available}/${item.initialStock}
@@ -1645,6 +1759,19 @@ function renderMarketplace() {
     marketplacePage = page;
     renderMarketplace();
   });
+}
+
+// Helper function to get demand score for sorting
+function getDemandScore(item) {
+  const demand = calculateDemand(item);
+  switch (demand) {
+    case 'Very High': return 4;
+    case 'High': return 3;
+    case 'Medium': return 2;
+    case 'Low': return 1;
+    case 'Very Low': return 0;
+    default: return 1; // N/A case
+  }
 }
 
 // Pagination helper function
@@ -2027,32 +2154,201 @@ function handleTheftBan(returnItemToVictim) {
 
 let lastTradeTimestamp = new Date();
 
-function getStockMultiplier(item) {
-    const stock = item.initialStock;
-    if (stock <= 50) return 1.5;
-    if (stock <= 250) return 1.25;
-    if (stock <= 1000) return 1.1;
-    return 1.0;
+// --- Desirability Scoring ---
+function getDesirabilityScore(item) {
+    // Hype/Desire: Terrible, Low, Mid, Good, Amazing
+    // Aesthetic: Ugly, Basical, Clean, Drippy, Iconic
+    // Clout: None, Minor Flex, Popular Flex, Major Flex, God-Tier Status
+    let score = 0;
+    // Hype
+    switch (item.hype) {
+        case 'Amazing': score += 3; break;
+        case 'Good': score += 2; break;
+        case 'Mid': score += 1; break;
+        case 'Low': score -= 1; break;
+        case 'Terrible': score -= 2; break;
+    }
+    // Aesthetic
+    switch (item.aesthetic) {
+        case 'Iconic': score += 2; break;
+        case 'Drippy': score += 1.5; break;
+        case 'Clean': score += 1; break;
+        case 'Basical': score += 0; break;
+        case 'Ugly': score -= 1; break;
+    }
+    // Clout
+    switch (item.clout) {
+        case 'God-Tier Status': score += 3; break;
+        case 'Major Flex': score += 2; break;
+        case 'Popular Flex': score += 1; break;
+        case 'Minor Flex': score += 0.5; break;
+        case 'None': score += 0; break;
+    }
+    // Trend
+    const trend = calculateItemTrend(item);
+    if (trend > 1.05) score += 1.5;
+    else if (trend > 1.01) score += 1;
+    else if (trend < 0.95) score -= 1;
+    // Demand
+    const demand = calculateDemand(item);
+    if (demand === 'Very High') score += 1.5;
+    else if (demand === 'High') score += 1;
+    else if (demand === 'Low') score -= 0.5;
+    else if (demand === 'Very Low') score -= 1;
+    return score;
 }
 
+// --- AI Inventory Profile ---
+function getAIInventoryProfile(ai) {
+    // Returns { avgValue, avgDesirability, lowValueCount, highValueCount, trendyCount }
+    if (!ai.inventory.length) return { avgValue: 0, avgDesirability: 0, lowValueCount: 0, highValueCount: 0, trendyCount: 0 };
+    let totalValue = 0, totalDes = 0, lowValue = 0, highValue = 0, trendy = 0;
+    for (const inv of ai.inventory) {
+        totalValue += inv.item.value;
+        const des = getDesirabilityScore(inv.item);
+        totalDes += des;
+        if (inv.item.value < 0.5 * totalValue / ai.inventory.length) lowValue++;
+        if (des >= 4) highValue++;
+        if (calculateItemTrend(inv.item) > 1.05) trendy++;
+    }
+    return {
+        avgValue: totalValue / ai.inventory.length,
+        avgDesirability: totalDes / ai.inventory.length,
+        lowValueCount: lowValue,
+        highValueCount: highValue,
+        trendyCount: trendy
+    };
+}
+
+// --- Modified Trade Logic ---
+function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
+    // Profile initiator's inventory
+    const profile = getAIInventoryProfile(initiator);
+    const partnerInventory = [...partner.inventory].sort((a,b) => getDesirabilityScore(b.item) - getDesirabilityScore(a.item));
+    let shoppingList = [];
+    let shoppingListValue = 0;
+
+    // --- Try to Trade Up ---
+    // If AI has mostly low-value items, seek to trade up for a rarer, more hyped item
+    if (profile.lowValueCount > profile.highValueCount && partnerInventory.length > 0) {
+        // Target the most desirable item the partner has
+        const best = partnerInventory[0];
+        if (getDesirabilityScore(best.item) >= 3) {
+            shoppingList.push(best);
+            shoppingListValue = getPerceivedValue(best.item);
+        }
+    }
+    // --- Flip Trendy Items ---
+    // If AI owns a hyped and rising item, consider trading it for profit
+    const flipCandidates = initiator.inventory.filter(inv => getDesirabilityScore(inv.item) >= 4 && calculateItemTrend(inv.item) > 1.05);
+    let flipMode = false;
+    if (flipCandidates.length && Math.random() < 0.5) {
+        // Try to trade away a trendy item for a good overpay
+        flipMode = true;
+        const toFlip = flipCandidates[0];
+        // Find a bundle of items from partner that overpay in value and desirability
+        const partnerOffers = partnerInventory.filter(i => getPerceivedValue(i.item) > toFlip.item.value * 0.7 && getDesirabilityScore(i.item) > 1);
+        if (partnerOffers.length) {
+            shoppingList = partnerOffers.slice(0, 2);
+            shoppingListValue = shoppingList.reduce((sum, i) => sum + getPerceivedValue(i.item), 0);
+        }
+    }
+    // --- Accept Downgrades If Overpay or Liquidity ---
+    // If the offered downgrade is overpaying in value/demand, or provides more liquidity
+    if (!shoppingList.length) {
+        // Default: target the best item, or a bundle if AI is hoarding
+        if (profile.trendyCount > 0 && Math.random() < 0.3) {
+            // Try to diversify
+            shoppingList = partnerInventory.slice(0, 2);
+            shoppingListValue = shoppingList.reduce((sum, i) => sum + getPerceivedValue(i.item), 0);
+        } else {
+            shoppingList.push(partnerInventory[0]);
+            shoppingListValue = getPerceivedValue(partnerInventory[0].item);
+        }
+    }
+    if (shoppingList.length === 0) return false;
+
+    // --- Build Offer ---
+    let initiatorOffer = [];
+    let partnerOffer = shoppingList;
+    const initiatorTradableItems = initiator.inventory
+        .filter(i => !shoppingList.some(s => s.item.id === i.item.id))
+        .sort((a,b) => getDesirabilityScore(a.item) - getDesirabilityScore(b.item));
+    let initiatorValue = 0;
+    let partnerValue = partnerOffer.reduce((sum, i) => sum + getPerceivedValue(i.item), 0);
+
+    // Use "adds" smartly: offer multiple small items for a better item, but avoid overpaying unless trend/clout
+    for (const item of initiatorTradableItems) {
+        if (initiatorOffer.length >= 5) break;
+        if (initiatorValue >= partnerValue * (flipMode ? 0.95 : 1.02)) break;
+        // Only add more if the target is very desirable or trending
+        if (getDesirabilityScore(partnerOffer[0].item) >= 3 || calculateItemTrend(partnerOffer[0].item) > 1.05 || partnerOffer[0].item.clout === 'God-Tier Status') {
+            initiatorOffer.push(item);
+            initiatorValue += getPerceivedValue(item.item);
+        } else if (initiatorOffer.length < 2) {
+            initiatorOffer.push(item);
+            initiatorValue += getPerceivedValue(item.item);
+        } else {
+            break;
+        }
+    }
+    if (initiatorOffer.length === 0) return false;
+
+    // --- Sanity Check on Raw Value ---
+    const rawInitiatorValue = initiatorOffer.reduce((s, i) => s + i.item.value, 0);
+    const rawPartnerValue = partnerOffer.reduce((s, i) => s + i.item.value, 0);
+    if (rawPartnerValue <= 0) return false;
+    const totalTradeValue = rawInitiatorValue + rawPartnerValue;
+    const exchangeRatio = rawInitiatorValue / rawPartnerValue;
+    if (totalTradeValue < 1_000_000) {
+        if (exchangeRatio > 1.5 || exchangeRatio < 0.7) {
+            return false;
+        }
+    } else {
+        if (exchangeRatio > 1.8 || exchangeRatio < 0.6) { 
+            return false;
+        }
+    }
+
+    // --- Final Evaluation: Trend & Demand Awareness ---
+    const finalRatio = initiatorValue / partnerValue;
+    let acceptanceChance = 0;
+    if (flipMode) {
+        // If flipping, only accept if getting a good overpay or more desirable items
+        if (initiatorValue < partnerValue * 0.95) return false;
+        acceptanceChance = 0.8;
+    } else if (finalRatio < 0.95) acceptanceChance = 0.05;
+    else if (finalRatio < 1.1) acceptanceChance = 0.9;
+    else acceptanceChance = 0.3;
+    if (isForced) acceptanceChance = 1.0;
+    // Greedy add
+    if (Math.random() < 0.15 && finalRatio > 1.05 && initiatorTradableItems.length > initiatorOffer.length) {
+        const smallestAvailableItem = initiatorTradableItems.find(i => !initiatorOffer.some(o => o.serialNumber === i.serialNumber));
+        if (smallestAvailableItem && initiatorOffer.length < 5) {
+            initiatorOffer.push(smallestAvailableItem);
+        }
+    }
+    if (Math.random() < acceptanceChance) {
+        executeTrade(initiator, partner, initiatorOffer, partnerOffer);
+        return true;
+    }
+    return false;
+}
+
+// --- Top AI Trade Frequency ---
 function attemptTopTierTrade() {
     // Select from top 100 who have items to trade
     const top100Pool = valueLeaderboard.slice(0, 100).filter(u => !u.isAdmin && u.inventory.length > 0);
-
     if (top100Pool.length < 2) {
-        // Not enough rich players, fall back to a high-value trade
         attemptHighValueTrade();
         return;
     }
-
     // Weighted pick among the top players - heavily favor top 10
     const top10Pool = top100Pool.slice(0, 10);
     const restPool = top100Pool.slice(10);
-    
     let traderA, traderB;
-    
-    // 70% chance to pick from top 10, 30% from rest
-    if (Math.random() < 0.7 && top10Pool.length >= 2) {
+    // 80% chance to pick from top 10, 20% from rest (increase high-value trade frequency)
+    if (Math.random() < 0.8 && top10Pool.length >= 2) {
         traderA = top10Pool[Math.floor(Math.random() * top10Pool.length)];
         const traderAPool = top10Pool.filter(u => u.id !== traderA.id);
         traderB = traderAPool[Math.floor(Math.random() * traderAPool.length)];
@@ -2068,7 +2364,6 @@ function attemptTopTierTrade() {
             }
             return pool[pool.length - 1];
         }
-        
         traderA = weightedPick(restPool);
         const traderBPool = restPool.filter(u => u.id !== traderA.id);
         if (traderBPool.length === 0) {
@@ -2077,11 +2372,10 @@ function attemptTopTierTrade() {
         }
         traderB = weightedPick(traderBPool);
     }
-
     if (traderA && traderB) {
         negotiateAndExecuteTrade(traderA, traderB);
     } else {
-        attemptHighValueTrade(); // Fallback
+        attemptHighValueTrade();
     }
 }
 
@@ -2108,116 +2402,6 @@ function attemptRandomTrade(isForced = false) {
     const partner = partnerPool[Math.floor(Math.random() * partnerPool.length)];
 
     negotiateAndExecuteTrade(initiator, partner, isForced);
-}
-
-function negotiateAndExecuteTrade(initiator, partner, isForced = false) {
-    // --- Phase 1: Initiator Decides What They Want (Shopping List) ---
-    const partnerInventory = [...partner.inventory].sort((a,b) => getPerceivedValue(b.item) - getPerceivedValue(a.item));
-    let shoppingList = []; // The items the initiator wants from the partner
-    let shoppingListValue = 0;
-
-    // Special handling for low stock items - they should be more desirable
-    const lowStockItems = partnerInventory.filter(i => i.item.initialStock <= 50);
-    const regularItems = partnerInventory.filter(i => i.item.initialStock > 50);
-    
-    // 40% chance to specifically target low stock items if available
-    if (lowStockItems.length > 0 && Math.random() < 0.4) {
-        shoppingList.push(lowStockItems[0]);
-        shoppingListValue = getPerceivedValue(lowStockItems[0].item);
-    } else {
-        // The initiator might want one big item or a few smaller ones.
-        const decision = Math.random();
-        if (decision < 0.7 && partnerInventory.length > 0) { // 70% chance to go for one big item
-            shoppingList.push(partnerInventory[0]);
-            shoppingListValue = getPerceivedValue(partnerInventory[0].item);
-        } else { // 30% chance to go for a bundle of smaller/medium items
-            const initiatorValue = calculateAIValue(initiator);
-            const affordableItems = partnerInventory.filter(i => getPerceivedValue(i.item) < initiatorValue * 0.6);
-            affordableItems.sort(() => 0.5 - Math.random()); // Shuffle to get variety
-            for(const item of affordableItems) {
-                if (shoppingList.length >= 3) break; // Don't ask for too much at once
-                if (shoppingListValue + getPerceivedValue(item.item) < initiatorValue * 0.8) {
-                    shoppingList.push(item);
-                    shoppingListValue += getPerceivedValue(item.item);
-                }
-            }
-        }
-    }
-    
-    if (shoppingList.length === 0) return false;
-
-    // --- Phase 2: Building the Deal ---
-    let initiatorOffer = [];
-    let partnerOffer = shoppingList; // Partner's side starts with the target items
-    
-    const initiatorTradableItems = initiator.inventory
-        .filter(i => !shoppingList.some(s => s.item.id === i.item.id))
-        .sort((a,b) => getPerceivedValue(a.item) - getPerceivedValue(b.item));
-
-    let initiatorValue = 0;
-    let partnerValue = partnerOffer.reduce((sum, i) => sum + getPerceivedValue(i.item), 0);
-
-    // Initiator builds an offer to match the partner's perceived value
-    for (const item of initiatorTradableItems) {
-        if (initiatorOffer.length >= 5) break;
-        if (initiatorValue >= partnerValue * 1.02) break; // Reduced from 1.05 to 1.02 for more balanced trades
-        
-        initiatorOffer.push(item);
-        initiatorValue += getPerceivedValue(item.item);
-    }
-
-    if (initiatorOffer.length === 0) return false;
-
-    // --- Sanity Check on Raw Value ---
-    const rawInitiatorValue = initiatorOffer.reduce((s, i) => s + i.item.value, 0);
-    const rawPartnerValue = partnerOffer.reduce((s, i) => s + i.item.value, 0);
-    
-    // Prevent division by zero if partner offers nothing of value
-    if (rawPartnerValue <= 0) return false;
-
-    const totalTradeValue = rawInitiatorValue + rawPartnerValue;
-    const exchangeRatio = rawInitiatorValue / rawPartnerValue;
-
-    // Tighter balance constraints to reduce overpays
-    if (totalTradeValue < 1_000_000) {
-        // Auto-decline if one side is offering more than 1.5x overpay, or receiving less than 70% of the value they're giving up.
-        if (exchangeRatio > 1.5 || exchangeRatio < 0.7) {
-            return false;
-        }
-    }
-    // For high-value trades, allow more flexibility but still prevent absurd trades.
-    else {
-        // e.g. 1.8M for 1M is a potential deal, but 2.0M for 1M is not.
-        if (exchangeRatio > 1.8 || exchangeRatio < 0.6) { 
-            return false;
-        }
-    }
-
-    // --- Phase 3: Final Evaluation & Balancing ---
-    // This check uses perceived value for the final AI decision
-    const finalRatio = initiatorValue / partnerValue;
-    
-    let acceptanceChance = 0;
-    if (finalRatio < 0.95) acceptanceChance = 0.05;  // Very unlikely to accept underpay
-    else if (finalRatio < 1.1) acceptanceChance = 0.9; // Very likely to accept fair/slight OP
-    else acceptanceChance = 0.3; // Less likely to accept a huge OP
-
-    if (isForced) acceptanceChance = 1.0;
-    
-    // The partner has a small chance to "get greedy" and ask for one more small item if the offer is good
-    if (Math.random() < 0.15 && finalRatio > 1.05 && initiatorTradableItems.length > initiatorOffer.length) {
-        const smallestAvailableItem = initiatorTradableItems.find(i => !initiatorOffer.some(o => o.serialNumber === i.serialNumber));
-        if (smallestAvailableItem && initiatorOffer.length < 5) {
-            initiatorOffer.push(smallestAvailableItem);
-        }
-    }
-
-    if (Math.random() < acceptanceChance) {
-        executeTrade(initiator, partner, initiatorOffer, partnerOffer);
-        return true;
-    }
-
-    return false;
 }
 
 function executeTrade(traderA, traderB, itemsFromA, itemsFromB) {
@@ -2672,7 +2856,6 @@ function goCollectible(itemId, value, rap) {
 function openItemStatsPopup(itemId) {
     const item = marketplace.find(i => i.id === itemId);
     if (!item) return;
-    
     if (!item.stats) {
         item.stats = { tradeCount: 0, netPayRatioSum: 0, valueHistory: [{ date: new Date(), value: item.value }] };
     }
@@ -2681,11 +2864,21 @@ function openItemStatsPopup(itemId) {
     document.getElementById('item-stats-img-src').src = item.image;
     document.getElementById('item-stats-img-src').alt = item.name;
 
-    document.getElementById('item-stats-initial-price').textContent = `R$ ${item.initialPrice.toLocaleString()}`;
-    document.getElementById('item-stats-demand').textContent = calculateDemand(item);
-    const avgOp = item.stats.tradeCount > 0 ? (item.stats.netPayRatioSum / item.stats.tradeCount) * 100 : 0;
-    document.getElementById('item-stats-op').textContent = `${avgOp.toFixed(1)}%`;
-    document.getElementById('item-stats-trades').textContent = item.stats.tradeCount;
+    // Reset and add desirability fields to stats popup
+    const detailsDiv = document.getElementById('item-stats-details');
+    detailsDiv.innerHTML = `
+      <h4>Details</h4>
+      <p><strong>Initial Price:</strong> <span id="item-stats-initial-price" style="font-weight: bold;">R$ ${item.initialPrice.toLocaleString()}</span></p>
+      <p><strong>Demand:</strong> <span id="item-stats-demand" style="color: var(--primary-blue); font-weight: bold;">${calculateDemand(item)}</span></p>
+      <p><strong>Average Overpay:</strong> <span id="item-stats-op" style="color: var(--value-green); font-weight: bold;">${item.stats.tradeCount > 0 ? ((item.stats.netPayRatioSum / item.stats.tradeCount) * 100).toFixed(1) : 0}%</span></p>
+      <p><strong>Times Traded:</strong> <span id="item-stats-trades" style="font-weight: bold;">${item.stats.tradeCount}</span></p>
+      <p><strong>Unique Owners:</strong> <span id="item-stats-owners" style="font-weight: bold;">0</span></p>
+      <p><strong>Terminated Copies:</strong> <span id="item-stats-terminated" style="font-weight: bold;">0</span></p>
+      <hr style="border-color: var(--border-color); margin: 10px 0;">
+      <p><strong>Hype/Desire:</strong> <span>${item.hype || 'N/A'}</span></p>
+      <p><strong>Aesthetic:</strong> <span>${item.aesthetic || 'N/A'}</span></p>
+      <p><strong>Clout Factor:</strong> <span>${item.clout || 'N/A'}</span></p>
+    `;
 
     // Calculate Unique Owners
     const uniqueOwners = new Set();
@@ -3208,6 +3401,109 @@ function renderSerialTracker() {
     
     // Clear results
     serialTrackingResults.innerHTML = '<div class="serial-not-found">Select an item and enter a serial number to track ownership history.</div>';
+}
+
+// --- Item Export/Import Functions ---
+function exportItems() {
+    try {
+        const itemsToExport = marketplace.map(item => ({
+            name: item.name,
+            image: item.image,
+            initialPrice: item.initialPrice,
+            hype: item.hype,
+            aesthetic: item.aesthetic,
+            clout: item.clout,
+            initialStock: item.initialStock,
+            isCollectible: item.isCollectible
+        }));
+
+        const blob = new Blob([JSON.stringify(itemsToExport, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", url);
+        downloadAnchorNode.setAttribute("download", `marketplace_items_${new Date().toISOString().split('T')[0]}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+
+        URL.revokeObjectURL(url);
+        alert(`Successfully exported ${itemsToExport.length} items.`);
+
+    } catch(error) {
+        alert("An error occurred during export: " + error.message);
+    }
+}
+
+function importItems(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        setTimeout(() => {
+            try {
+                const items = JSON.parse(e.target.result);
+                
+                if (!Array.isArray(items)) {
+                    throw new Error("Invalid file format. Expected an array of items.");
+                }
+
+                let importedCount = 0;
+                items.forEach(itemData => {
+                    // Validate required fields
+                    if (!itemData.name || !itemData.image || !itemData.initialPrice || !itemData.initialStock) {
+                        console.warn("Skipping item with missing required fields:", itemData);
+                        return;
+                    }
+
+                    // Create new item
+                    const newItem = {
+                        id: itemIdCounter++,
+                        name: itemData.name,
+                        image: itemData.image,
+                        isCollectible: itemData.isCollectible !== false, // Default to true
+                        createdAt: new Date(),
+                        value: Math.round(itemData.initialPrice * 0.75), // Start at 75% of initial price
+                        initialPrice: itemData.initialPrice,
+                        rap: 0,
+                        initialStock: itemData.initialStock,
+                        available: itemData.initialStock,
+                        serialNumbers: Array.from({length: itemData.initialStock}, (_, i) => i + 1),
+                        hype: itemData.hype || 'Mid',
+                        aesthetic: itemData.aesthetic || 'Basical',
+                        clout: itemData.clout || 'None'
+                    };
+
+                    marketplace.unshift(newItem);
+                    importedCount++;
+                });
+
+                if (importedCount > 0) {
+                    // Distribute imported items
+                    marketplace.forEach(item => {
+                        if (item.available > 0) {
+                            distributeToRoblox(item);
+                            distributeItem(item);
+                        }
+                    });
+
+                    updateAllLeaderboards();
+                    renderMarketplace();
+                    renderAdminPanel();
+                    alert(`Successfully imported ${importedCount} items!`);
+                } else {
+                    alert("No valid items were imported.");
+                }
+
+            } catch (error) {
+                alert("Failed to import items. File may be corrupt or invalid. Error: " + error.message);
+            } finally {
+                event.target.value = '';
+            }
+        }, 100);
+    };
+    reader.readAsText(file);
 }
   </script>
 </body>
